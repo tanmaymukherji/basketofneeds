@@ -26,8 +26,14 @@ th, td { border-bottom:1px solid #e5e7eb; padding:8px; text-align:left; } th { b
 .warn { background:#fff7ed; border:1px solid #fed7aa; color:#9a3412; padding:10px 12px; border-radius:10px; margin-top:10px; display:none; }
 .footer { color:var(--muted); padding:30px 0 10px; font-size:12px; }
 @media (max-width: 900px) { .kpis,.grid2,.grid3 { grid-template-columns:1fr; } }
+.gear-btn{position:absolute;top:24px;right:32px;background:none;border:none;color:white;font-size:26px;cursor:pointer;padding:4px 8px;min-width:auto;border-radius:6px}.gear-btn:hover{background:rgba(255,255,255,0.15)}
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.3);z-index:50;display:flex;align-items:center;justify-content:center}
+.modal-card{background:white;border-radius:12px;padding:24px;width:100%;max-width:440px;margin:16px;box-shadow:0 20px 60px rgba(0,0,0,0.2);max-height:90vh;overflow-y:auto}
+.modal-card h2{margin:0 0 16px;font-size:18px}.modal-card label{display:block;font-size:13px;font-weight:500;margin-bottom:4px}
+.modal-card input{width:100%;box-sizing:border-box;margin-bottom:8px}.modal-card .hint{font-size:11px;color:var(--muted);margin:-4px 0 12px}
+.modal-card .btn-row{display:flex;gap:8px;justify-content:flex-end;margin-top:16px}
 </style></head><body>
-<header><h1 id="title">Basket of Needs Dashboard</h1><p>Upload a fresh Excel survey in the same column format to refresh consumption patterns, leakage, local-readiness and income-potential analysis.</p></header>
+<header style="position:relative"><h1 id="title">Basket of Needs Dashboard</h1><p>Upload a fresh Excel survey in the same column format to refresh consumption patterns, leakage, local-readiness and income-potential analysis.</p><button id="settingsBtn" class="gear-btn" onclick="openSettings()">&#9881;</button></header>
 <div class="container">
  <div class="card">
    <h2 style="margin-top:0">Refresh with latest survey data</h2>
@@ -76,8 +82,37 @@ th, td { border-bottom:1px solid #e5e7eb; padding:8px; text-align:left; } th { b
    <div class="controls"><div><label>Filter category</label><select id="catFilter"><option>All</option></select></div><div><label>Minimum opportunity score</label><input id="minOpp" type="number" value="0"/></div></div>
    <h3>Product opportunity table</h3><div style="max-height:520px; overflow:auto"><table id="prodTable"><thead><tr><th>Product</th><th>Category</th><th>Monthly spend</th><th>Avg / HH</th><th>HH buying</th><th>Leak share</th><th>Local readiness</th><th>Feasibility</th><th>Opportunity score</th><th>Recommended angle</th></tr></thead><tbody></tbody></table></div>
  </div>
- <div class="card" style="margin-top:16px"><h3>Stakeholder interpretation</h3><p id="interpretation"></p><ul id="recommendations"></ul></div>
+ <div class="card" style="margin-top:16px"><h3>Stakeholder interpretation</h3><p id="interpretation"></p><ul id="recommendations"></ul><button id="findSolutionsBtn" class="secondary" style="margin-top:12px;min-width:auto">Find Potential Solutions</button></div>
  <div class="footer">This dashboard runs fully in the browser. Uploaded data is processed locally in the page and is not sent to a server.</div>
+<div id="settingsModal" class="modal-overlay" style="display:none">
+<div class="modal-card">
+<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+<h2>Settings</h2>
+<button onclick="closeSettings()" style="background:none;border:none;font-size:24px;cursor:pointer;color:#666;min-width:auto">&times;</button>
+</div>
+<h3 style="font-size:14px;color:var(--green2);border-bottom:1px solid #e2e8f0;padding-bottom:8px;margin:0 0 12px">&#129302; Grok (xAI) API &mdash; Need Summarization</h3>
+<label>Grok API Key</label>
+<input type="password" id="grokKeyInput" placeholder="xai-..." />
+<p class="hint">Used to summarize product needs. Get a key at <a href="https://console.x.ai" target="_blank" style="color:var(--green2)">console.x.ai</a></p>
+<div style="display:flex;gap:8px;align-items:center;margin-bottom:16px">
+<button id="testGrokBtn" class="secondary" style="font-size:12px;padding:4px 12px;min-width:auto">Test</button>
+<span id="grokTestResult" class="small"></span>
+</div>
+<h3 style="font-size:14px;color:var(--green2);border-bottom:1px solid #e2e8f0;padding-bottom:8px;margin:0 0 12px">&#127758; AskGRE API &mdash; Solution Matching</h3>
+<label>AskGRE API Key</label>
+<input type="password" id="greKeyInput" placeholder="gre_..." />
+<p class="hint">Used to find solution providers. Get your key at <a href="https://askgre.grameee.org/admin" target="_blank" style="color:var(--green2)">askgre.grameee.org/admin</a></p>
+<div style="display:flex;gap:8px;align-items:center;margin-bottom:16px">
+<button id="testGreBtn" class="secondary" style="font-size:12px;padding:4px 12px;min-width:auto">Test</button>
+<span id="greTestResult" class="small"></span>
+</div>
+<div class="btn-row">
+<button onclick="saveSettings()" class="secondary" style="min-width:auto">Save Settings</button>
+<button onclick="closeSettings()">Close</button>
+</div>
+<span id="saveStatus" class="small" style="display:none;margin-top:8px">Saved!</span>
+</div>
+</div>
 </div>
 <script>
 const PRODUCT_CONFIG = [{"name": "Seeds", "category": "Farm Inputs", "purchase_col": 14, "source_col": 38, "willing_col": 62, "spend_col": 86, "local_feasibility": 0.7, "default_capture_rate": 0.43, "default_margin": 0.22}, {"name": "Fertilizers", "category": "Farm Inputs", "purchase_col": 15, "source_col": 39, "willing_col": 63, "spend_col": 87, "local_feasibility": 0.7, "default_capture_rate": 0.38, "default_margin": 0.22}, {"name": "Pesticides / Weedicides", "category": "Farm Inputs", "purchase_col": 16, "source_col": 40, "willing_col": 64, "spend_col": 88, "local_feasibility": 0.35, "default_capture_rate": 0.45, "default_margin": 0.22}, {"name": "Farm equipment rental/purchase", "category": "Farm Inputs", "purchase_col": 17, "source_col": 41, "willing_col": 65, "spend_col": 89, "local_feasibility": 0.7, "default_capture_rate": 0.37, "default_margin": 0.35}, {"name": "Vegetables", "category": "Raw Food", "purchase_col": 19, "source_col": 43, "willing_col": 67, "spend_col": 90, "local_feasibility": 1.0, "default_capture_rate": 0.38, "default_margin": 0.18}, {"name": "Fruits", "category": "Raw Food", "purchase_col": 20, "source_col": 44, "willing_col": 68, "spend_col": 91, "local_feasibility": 1.0, "default_capture_rate": 0.44, "default_margin": 0.18}, {"name": "Cereals", "category": "Raw Food", "purchase_col": 21, "source_col": 45, "willing_col": 69, "spend_col": 92, "local_feasibility": 1.0, "default_capture_rate": 0.43, "default_margin": 0.18}, {"name": "Milk & dairy", "category": "Raw Food", "purchase_col": 22, "source_col": 46, "willing_col": 70, "spend_col": 93, "local_feasibility": 1.0, "default_capture_rate": 0.34, "default_margin": 0.18}, {"name": "Meat / Fish / Eggs", "category": "Raw Food", "purchase_col": 23, "source_col": 47, "willing_col": 71, "spend_col": 94, "local_feasibility": 1.0, "default_capture_rate": 0.4, "default_margin": 0.18}, {"name": "Cooking oil", "category": "Raw Food", "purchase_col": 24, "source_col": 48, "willing_col": 72, "spend_col": 95, "local_feasibility": 0.7, "default_capture_rate": 0.54, "default_margin": 0.18}, {"name": "Spices / masala", "category": "Raw Food", "purchase_col": 25, "source_col": 49, "willing_col": 73, "spend_col": 96, "local_feasibility": 1.0, "default_capture_rate": 0.54, "default_margin": 0.18}, {"name": "Packaged snacks", "category": "Processed Food", "purchase_col": 26, "source_col": 50, "willing_col": 74, "spend_col": 97, "local_feasibility": 0.7, "default_capture_rate": 0.48, "default_margin": 0.25}, {"name": "Beverages", "category": "Processed Food", "purchase_col": 27, "source_col": 51, "willing_col": 75, "spend_col": 98, "local_feasibility": 0.7, "default_capture_rate": 0.47, "default_margin": 0.25}, {"name": "Ready-to-cook items", "category": "Processed Food", "purchase_col": 28, "source_col": 52, "willing_col": 76, "spend_col": 99, "local_feasibility": 0.7, "default_capture_rate": 0.51, "default_margin": 0.25}, {"name": "Personal care", "category": "Non-Food Essentials", "purchase_col": 29, "source_col": 53, "willing_col": 77, "spend_col": 100, "local_feasibility": 0.7, "default_capture_rate": 0.54, "default_margin": 0.2}, {"name": "Cleaning products", "category": "Non-Food Essentials", "purchase_col": 30, "source_col": 54, "willing_col": 78, "spend_col": 101, "local_feasibility": 0.7, "default_capture_rate": 0.55, "default_margin": 0.2}, {"name": "Clothing", "category": "Non-Food Essentials", "purchase_col": 31, "source_col": 55, "willing_col": 79, "spend_col": 102, "local_feasibility": 0.35, "default_capture_rate": 0.54, "default_margin": 0.2}, {"name": "Footwear", "category": "Non-Food Essentials", "purchase_col": 32, "source_col": 56, "willing_col": 80, "spend_col": 103, "local_feasibility": 0.35, "default_capture_rate": 0.54, "default_margin": 0.2}, {"name": "Household items", "category": "Non-Food Essentials", "purchase_col": 33, "source_col": 57, "willing_col": 81, "spend_col": 104, "local_feasibility": 0.35, "default_capture_rate": 0.53, "default_margin": 0.2}, {"name": "Education / stationery", "category": "Non-Food Essentials", "purchase_col": 34, "source_col": 58, "willing_col": 82, "spend_col": 105, "local_feasibility": 0.35, "default_capture_rate": 0.49, "default_margin": 0.2}, {"name": "Energy", "category": "Non-Food Essentials", "purchase_col": 35, "source_col": 59, "willing_col": 83, "spend_col": 106, "local_feasibility": 0.15, "default_capture_rate": 0.51, "default_margin": 0.05}, {"name": "Mobile recharge", "category": "Non-Food Essentials", "purchase_col": 36, "source_col": 60, "willing_col": 84, "spend_col": 107, "local_feasibility": 0.15, "default_capture_rate": 0.37, "default_margin": 0.05}, {"name": "Health & hygiene", "category": "Non-Food Essentials", "purchase_col": 37, "source_col": 61, "willing_col": 85, "spend_col": 108, "local_feasibility": 0.7, "default_capture_rate": 0.46, "default_margin": 0.2}];
@@ -157,4 +192,13 @@ document.getElementById('resetBtn').onclick=()=>{headers=DEFAULT_HEADERS.slice()
 function showMsg(s){let el=document.getElementById('uploadMsg'); el.style.display='block'; el.textContent=s;} function hideMsg(){document.getElementById('uploadMsg').style.display='none';}
 document.getElementById('placeName').addEventListener('input',draw); ['prodSelect','hh','capture','margin','groupShare'].forEach(id=>document.getElementById(id).addEventListener('change',updateScenario)); ['catFilter','minOpp'].forEach(id=>document.getElementById(id).addEventListener('change',fillTable));
 compute(); draw();
+
+// Settings
+function openSettings(){var m=document.getElementById('settingsModal');document.getElementById('grokKeyInput').value=localStorage.getItem('grok_api_key')||'';document.getElementById('greKeyInput').value=localStorage.getItem('gre_api_key')||'';m.style.display='flex'}
+function closeSettings(){document.getElementById('settingsModal').style.display='none'}
+function saveSettings(){localStorage.setItem('grok_api_key',document.getElementById('grokKeyInput').value);localStorage.setItem('gre_api_key',document.getElementById('greKeyInput').value);var s=document.getElementById('saveStatus');s.style.display='inline';setTimeout(function(){s.style.display='none'},2000)}
+document.getElementById('testGrokBtn').onclick=async function(){var k=document.getElementById('grokKeyInput').value,e=document.getElementById('grokTestResult');if(!k){e.textContent='No key';return}e.textContent='Testing...';try{var r=await fetch('https://api.x.ai/v1/chat/completions',{method:'POST',headers:{'Authorization':'Bearer '+k,'Content-Type':'application/json'},body:JSON.stringify({model:'grok-2-1212',messages:[{role:'user',content:'Say OK'}],max_tokens:10})});e.textContent=r.ok?'OK':'Error '+r.status}catch(ex){e.textContent='Failed'}}
+document.getElementById('testGreBtn').onclick=async function(){var k=document.getElementById('greKeyInput').value,e=document.getElementById('greTestResult');if(!k){e.textContent='No key';return}e.textContent='Testing...';try{var r=await fetch('https://askgre.grameee.org/api/chat',{method:'POST',headers:{'Authorization':'Bearer '+k,'Content-Type':'application/json'},body:JSON.stringify({message:'test'})});e.textContent=r.ok?'OK':'Error '+r.status}catch(ex){e.textContent='Failed'}}
+document.getElementById('settingsModal').onclick=function(e){if(e.target===this)closeSettings()}
+document.getElementById('findSolutionsBtn').onclick=function(){var gk=localStorage.getItem('grok_api_key'),ak=localStorage.getItem('gre_api_key');if(!gk||!ak){alert('Please set both API keys in Settings first.');openSettings();return}var f=products.filter(function(p){return p.opportunity_score>=100});if(!f.length){alert('No products with opportunity score &ge; 100. Try different data.');return}sessionStorage.setItem('solutionsProducts',JSON.stringify(f.map(function(p){return{name:p.name,category:p.category,suggestion:recMap[p.name]||''}})));window.location.href='solutions.html'}
 </script></body></html>

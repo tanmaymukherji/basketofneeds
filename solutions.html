@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>Find Potential Solutions - Basket of Needs</title>
+<style>
+:root{--green:#164e3b;--green2:#0f766e;--pale:#ecfdf5;--muted:#64748b;--bg:#f6f8f5}
+body{font-family:Arial,sans-serif;margin:0;background:var(--bg);color:#1f2937}
+header{background:var(--green);color:white;padding:24px 32px;position:relative}
+header h1{margin:0 0 6px;font-size:28px}header p{margin:0;opacity:.9}
+.container{padding:22px 32px;max-width:1320px;margin:auto}
+.card{background:white;border-radius:14px;padding:16px;box-shadow:0 1px 4px rgba(0,0,0,.08);margin-bottom:16px}
+.card h3{margin:0 0 8px;font-size:16px}
+button{padding:8px 10px;border:1px solid #cbd5e1;border-radius:8px;min-width:140px}
+button.secondary{background:#e2e8f0;color:#0f172a;border:1px solid #cbd5e1}
+.small{font-size:12px;color:var(--muted)}
+.footer{color:var(--muted);padding:30px 0 10px;font-size:12px}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th,td{border-bottom:1px solid #e5e7eb;padding:10px 8px;text-align:left;vertical-align:top}
+th{background:var(--pale);color:#14532d;position:sticky;top:0}
+.progress-container{display:flex;align-items:center;gap:12px;margin-top:12px}
+.progress-bar{flex:1;height:8px;background:#e2e8f0;border-radius:4px;overflow:hidden}
+.progress-fill{height:100%;background:var(--green2);border-radius:4px;transition:width 0.3s}
+.need-text{max-width:280px}
+.provider-list{display:flex;flex-direction:column;gap:6px}
+.provider-item{font-size:12px;line-height:1.4}
+.provider-item a{color:var(--green2);text-decoration:underline}
+.score-badge{display:inline-block;padding:1px 6px;border-radius:4px;background:#dcfce7;color:#166534;font-size:10px;font-weight:700}
+.error-msg{color:#9a3412;font-size:12px}
+@media(max-width:900px){.container{padding:12px}.need-text{max-width:none}th,td{font-size:12px;padding:6px 4px}}
+</style>
+</head><body>
+<header><h1>Find Potential Solutions</h1><p>AI-suggested solutions for high-opportunity products</p></header>
+<div class="container">
+
+<div class="card" style="padding:12px 16px">
+<button id="backBtn" class="secondary" style="min-width:auto">&larr; Back to Dashboard</button>
+</div>
+
+<div id="statusCard" class="card">
+<h3 id="statusTitle">Preparing...</h3>
+<p id="statusDetail">Initializing analysis</p>
+<div class="progress-container">
+<div class="progress-bar"><div id="progressFill" class="progress-fill" style="width:0%"></div></div>
+<span id="progressPct" class="small">0%</span>
+</div>
+</div>
+
+<div id="errorCard" class="card" style="display:none;border:1px solid #fed7aa;background:#fff7ed">
+<h3 style="color:#9a3412;margin:0 0 8px">Something went wrong</h3>
+<p id="errorMsg" style="color:#9a3412;margin:0"></p>
+<button onclick="location.reload()" class="secondary" style="margin-top:12px;min-width:auto">Retry</button>
+</div>
+
+<div id="noDataCard" class="card" style="display:none">
+<p>No products found. Please go back to the dashboard and click <b>Find Potential Solutions</b> first.</p>
+</div>
+
+<div id="resultsCard" class="card" style="display:none">
+<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+<h3 style="margin:0">Potential Solutions</h3>
+<span id="resultCount" class="small"></span>
+</div>
+<div style="overflow-x:auto">
+<table id="solutionsTable"><thead><tr><th>Product</th><th>Need (derived)</th><th>Potential Solution Providers</th></tr></thead><tbody></tbody></table>
+</div>
+</div>
+
+<div class="footer">Powered by Grok (xAI) need analysis and AskGRE solution matching.</div>
+</div>
+
+<script>
+var products = JSON.parse(sessionStorage.getItem('solutionsProducts') || 'null');
+if (!products || !products.length) {
+  document.getElementById('statusCard').style.display = 'none';
+  document.getElementById('noDataCard').style.display = 'block';
+} else {
+  (async function(){
+    await processProducts();
+  })();
+}
+
+function updateStatus(title, detail, pct) {
+  document.getElementById('statusTitle').textContent = title;
+  document.getElementById('statusDetail').textContent = detail;
+  document.getElementById('progressFill').style.width = pct + '%';
+  document.getElementById('progressPct').textContent = pct + '%';
+}
+
+function showError(msg) {
+  document.getElementById('statusCard').style.display = 'none';
+  document.getElementById('errorCard').style.display = 'block';
+  document.getElementById('errorMsg').textContent = msg;
+}
+
+function escapeHtml(str) {
+  var d = document.createElement('div');
+  d.textContent = str;
+  return d.innerHTML;
+}
+
+async function extractAllNeeds(products) {
+  var key = localStorage.getItem('grok_api_key');
+  if (!key) throw new Error('No Grok API key. Add it in Settings.');
+  
+  var prompt = 'You are a rural livelihood analyst. For each product below, extract 2-5 specific, actionable needs from the suggested action text. These needs will be used to search for solution providers in a rural development database.\n\nProducts:\n' + JSON.stringify(products.map(function(p){return{name:p.name,suggestion:p.suggestion}})) + '\n\nReturn a JSON object with a key "needs_map" where keys are product names and values are arrays of need strings. Each need should be a concise, searchable phrase (5-15 words). Example:\n{"needs_map":{"Seeds":["Seedling nursery establishment","Seed supply chain development"],"Cereals":["Local grain cleaning and milling","Millet flour production"]}}';
+  
+  var res = await fetch('https://api.x.ai/v1/chat/completions', {
+    method: 'POST',
+    headers: { 'Authorization': 'Bearer ' + key, 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      model: 'grok-2-1212',
+      messages: [{ role: 'user', content: prompt }],
+      temperature: 0.3,
+      max_tokens: 3000,
+      response_format: { type: 'json_object' }
+    })
+  });
+  
+  if (!res.ok) {
+    var errText = '';
+    try { var err = await res.json(); errText = err.error ? (err.error.message || JSON.stringify(err.error)) : res.status; } catch(e){ errText = res.status; }
+    throw new Error('Grok API error: ' + errText);
+  }
+  
+  var data = await res.json();
+  var parsed = JSON.parse(data.choices[0].message.content);
+  return parsed.needs_map || parsed;
+}
+
+async function searchAskGRE(query) {
+  var key = localStorage.getItem('gre_api_key');
+  var res = await fetch('https://askgre.grameee.org/api/chat', {
+    method: 'POST',
+    headers: { 'Authorization': 'Bearer ' + key, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ message: query })
+  });
+  if (!res.ok) throw new Error('AskGRE error: ' + res.status);
+  var data = await res.json();
+  return data.solutions || [];
+}
+
+async function processProducts() {
+  updateStatus('Analyzing product needs', 'Calling Grok AI to extract specific needs from ' + products.length + ' products...', 5);
+  
+  var needsByProduct;
+  try {
+    needsByProduct = await extractAllNeeds(products);
+  } catch (e) {
+    showError('Failed to analyze needs: ' + e.message);
+    return;
+  }
+  
+  var needsList = [];
+  var needIndex = {}; // productName -> array of { need, needIndex }
+  
+  for (var i = 0; i < products.length; i++) {
+    var p = products[i];
+    var needs = needsByProduct[p.name] || [];
+    if (!needs.length) continue;
+    needIndex[p.name] = [];
+    for (var j = 0; j < needs.length; j++) {
+      needIndex[p.name].push({ need: needs[j], idx: needsList.length });
+      needsList.push({ productIdx: i, need: needs[j] });
+    }
+  }
+  
+  var totalNeeds = needsList.length;
+  if (totalNeeds === 0) {
+    showError('Grok could not extract any needs from the products. Check your API key or try again.');
+    return;
+  }
+  
+  var results = {};
+  for (var i = 0; i < products.length; i++) {
+    results[products[i].name] = { name: products[i].name, category: products[i].category, needs: [] };
+  }
+  
+  var completed = 0;
+  
+  for (var n = 0; n < totalNeeds; n++) {
+    var item = needsList[n];
+    var p = products[item.productIdx];
+    var pct = 10 + Math.round((completed / totalNeeds) * 85);
+    updateStatus('Searching solutions for ' + p.name, 'Processing need ' + (completed + 1) + ' of ' + totalNeeds + ': "' + item.need + '"', pct);
+    
+    var solutions = [];
+    var error = null;
+    try {
+      solutions = await searchAskGRE(p.name + ': ' + item.need);
+    } catch (e) {
+      error = e.message;
+    }
+    
+    results[p.name].needs.push({ need: item.need, solutions: solutions.slice(0, 5), error: error });
+    completed++;
+  }
+  
+  updateStatus('Complete', 'All ' + totalNeeds + ' needs processed. Rendering results...', 100);
+  renderResults(results);
+}
+
+function renderResults(results) {
+  document.getElementById('statusCard').style.display = 'none';
+  document.getElementById('resultsCard').style.display = 'block';
+  
+  var tbody = document.querySelector('#solutionsTable tbody');
+  var rowCount = 0;
+  
+  for (var key in results) {
+    var product = results[key];
+    if (!product.needs || !product.needs.length) {
+      var tr = document.createElement('tr');
+      tr.innerHTML = '<td><b>' + escapeHtml(product.name) + '</b><br><span class="small">' + escapeHtml(product.category) + '</span></td><td class="small" style="color:var(--muted)">No needs derived</td><td class="small" style="color:var(--muted)">&mdash;</td>';
+      tbody.appendChild(tr);
+      rowCount++;
+      continue;
+    }
+    for (var i = 0; i < product.needs.length; i++) {
+      var nr = product.needs[i];
+      var tr = document.createElement('tr');
+      var providersHtml = '';
+      
+      if (nr.error) {
+        providersHtml = '<span class="error-msg">' + escapeHtml(nr.error) + '</span>';
+      } else if (!nr.solutions || !nr.solutions.length) {
+        providersHtml = '<span class="small" style="color:var(--muted)">No matching solutions found</span>';
+      } else {
+        providersHtml = '<div class="provider-list">';
+        for (var j = 0; j < nr.solutions.length; j++) {
+          var sol = nr.solutions[j];
+          providersHtml += '<div class="provider-item">';
+          if (sol.relevance_score !== undefined && sol.relevance_score !== null) {
+            providersHtml += '<span class="score-badge">' + Math.round(sol.relevance_score * 100) + '</span> ';
+          }
+          var oName = escapeHtml(sol.offering_name || 'Solution');
+          if (sol.offering_link) {
+            providersHtml += '<a href="' + escapeHtml(sol.offering_link) + '" target="_blank" rel="noopener">' + oName + '</a>';
+          } else {
+            providersHtml += '<strong>' + oName + '</strong>';
+          }
+          if (sol.provider_name) {
+            providersHtml += '<br><span class="small">Provider: ' + escapeHtml(sol.provider_name) + '</span>';
+          }
+          if (sol['6m_type']) {
+            providersHtml += '<br><span class="small">6M: ' + escapeHtml(sol['6m_type']) + '</span>';
+          }
+          providersHtml += '</div>';
+        }
+        providersHtml += '</div>';
+      }
+      
+      tr.innerHTML = '<td><b>' + escapeHtml(product.name) + '</b><br><span class="small">' + escapeHtml(product.category) + '</span></td><td class="need-text">' + escapeHtml(nr.need) + '</td><td>' + providersHtml + '</td>';
+      tbody.appendChild(tr);
+      rowCount++;
+    }
+  }
+  
+  document.getElementById('resultCount').textContent = rowCount + ' need' + (rowCount !== 1 ? 's' : '') + ' mapped';
+}
+
+document.getElementById('backBtn').onclick = function(){ window.location.href = 'index.html'; };
+</script>
+</body></html>
