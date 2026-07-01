@@ -70,7 +70,7 @@ th{background:var(--pale);color:#14532d;position:sticky;top:0}
 <button id="searchBtn" class="secondary" style="min-width:auto;padding:6px 18px;font-size:13px">Search Solution Providers</button>
 </div>
 <div style="overflow-x:auto">
-<table id="solutionsTable"><thead><tr><th>Product</th><th>Need (derived)</th><th>State</th><th>Potential Solution Providers</th></tr></thead><tbody></tbody></table>
+<table id="solutionsTable"><thead><tr><th>Product</th><th>Need (derived)</th><th>Potential Solution Providers</th></tr></thead><tbody></tbody></table>
 </div>
 </div>
 
@@ -185,7 +185,7 @@ function renderNeedsTable(results) {
       var nr=product.needs[i];
       var state=stateDetected||'';
       var tr=document.createElement('tr');
-      tr.innerHTML='<td><b>'+escapeHtml(product.name)+'</b><br><span class="small">'+escapeHtml(product.category)+'</span></td><td class="need-text">'+escapeHtml(nr.need)+'</td><td class="small">'+escapeHtml(state)+'</td><td class="small" style="color:var(--muted)"><i>Waiting to search...</i></td>';
+      tr.innerHTML='<td><b>'+escapeHtml(product.name)+'</b><br><span class="small">'+escapeHtml(product.category)+'</span></td><td class="need-text">'+escapeHtml(nr.need)+'</td><td class="small" style="color:var(--muted)"><i>Waiting to search...</i></td>';
       tbody.appendChild(tr);
       needsData.push({productName:product.name,category:product.category,need:nr.need,state:state,row:tr,solutions:[]});
       rowCount++;
@@ -202,17 +202,13 @@ async function searchSolutions() {
   var state=stateSelect.value;
   var btn=document.getElementById('searchBtn');
   btn.disabled=true;
-  btn.textContent='Searching...';
-  for(var i=0;i<needsData.length;i++){needsData[i].state=state;needsData[i].row.cells[2].textContent=state}
-  updateStatus('Searching solution providers','Processing '+needsData.length+' need(s) with state: '+state,0);
-  document.getElementById('statusCard').style.display='block';
-  document.getElementById('resultsCard').style.display='none';
+  btn.textContent='Searching 0/'+needsData.length+'...';
+  for(var i=0;i<needsData.length;i++){needsData[i].state=state}
   var completed=0;
   for(var i=0;i<needsData.length;i++){
     var nd=needsData[i];
     var query=state+' - '+nd.productName+': '+nd.need;
-    var pct=Math.round((completed/needsData.length)*95);
-    updateStatus('Searching for '+nd.productName,'Need '+(i+1)+' of '+needsData.length, pct);
+    btn.textContent='Searching '+(i+1)+'/'+needsData.length+'...';
     var solutions=[];
     try{
       var res=await fetch('https://askgre.grameee.org/api/chat',{
@@ -225,7 +221,7 @@ async function searchSolutions() {
       solutions=data.solutions||[];
     }catch(e){}
     nd.solutions=solutions;
-    var cell=nd.row.cells[3];
+    var cell=nd.row.cells[2];
     if(!solutions.length){
       cell.innerHTML='<span class="small" style="color:var(--muted)">No matching solutions found</span>';
     }else{
@@ -250,9 +246,6 @@ async function searchSolutions() {
   }
   btn.disabled=false;
   btn.textContent='Search Solution Providers';
-  updateStatus('Complete','All '+needsData.length+' need(s) processed.',100);
-  document.getElementById('statusCard').style.display='none';
-  document.getElementById('resultsCard').style.display='block';
 }
 
 // ---------- Navigation & Export ----------
