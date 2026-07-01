@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
-<title>Find Potential Solutions - Basket of Needs</title>
+<title>Potential Solution Match - Basket of Needs</title>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <style>
 :root{--green:#164e3b;--green2:#0f766e;--pale:#ecfdf5;--muted:#64748b;--bg:#f6f8f5}
@@ -32,7 +32,7 @@ th{background:var(--pale);color:#14532d;position:sticky;top:0}
 @media(max-width:900px){.container{padding:12px}.need-text{max-width:none}th,td{font-size:12px;padding:6px 4px}}
 </style>
 </head><body>
-<header><h1>Find Potential Solutions</h1><p>AI-suggested solutions for high-opportunity products</p></header>
+<header><h1>Potential Solution Match</h1><p>GRE Curated Solutions for high-opportunity Products and Services</p></header>
 <div class="container">
 
 <div class="card" style="padding:12px 16px">
@@ -60,9 +60,8 @@ th{background:var(--pale);color:#14532d;position:sticky;top:0}
 
 <div id="resultsCard" class="card" style="display:none">
 <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
-<h3 style="margin:0">Potential Solutions</h3>
-<span id="resultCount" class="small"></span>
-<button id="exportBtn" class="secondary" style="min-width:auto;font-size:12px;padding:4px 12px;margin-left:auto">Export to Excel</button>
+<div><h3 style="margin:0;display:inline">Potential Solutions</h3><span id="resultCount" class="small" style="margin-left:14px"></span></div>
+<button id="exportBtn" class="secondary" style="min-width:auto;font-size:12px;padding:4px 12px">Export to Excel</button>
 </div>
 <div id="stateRow" style="display:flex;align-items:center;gap:10px;margin-bottom:12px;padding:8px 0">
 <label style="font-size:13px;font-weight:600">State:</label>
