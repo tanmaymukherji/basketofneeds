@@ -67,7 +67,7 @@ th{background:var(--pale);color:#14532d;position:sticky;top:0}
 </div>
 </div>
 
-<div class="footer">Powered by Grok (xAI) need analysis and AskGRE solution matching.</div>
+<div class="footer">Powered by Groq need analysis and AskGRE solution matching.</div>
 </div>
 
 <script>
@@ -101,17 +101,20 @@ function escapeHtml(str) {
 }
 
 async function extractAllNeeds(products) {
-  var key = localStorage.getItem('grok_api_key');
-  if (!key) throw new Error('No Grok API key. Add it in Settings.');
+  var key = localStorage.getItem('groq_api_key');
+  if (!key) throw new Error('No Groq API key. Add it in Settings.');
   
   var prompt = 'You are a rural livelihood analyst. For each product below, extract 2-5 specific, actionable needs from the suggested action text. These needs will be used to search for solution providers in a rural development database.\n\nProducts:\n' + JSON.stringify(products.map(function(p){return{name:p.name,suggestion:p.suggestion}})) + '\n\nReturn a JSON object with a key "needs_map" where keys are product names and values are arrays of need strings. Each need should be a concise, searchable phrase (5-15 words). Example:\n{"needs_map":{"Seeds":["Seedling nursery establishment","Seed supply chain development"],"Cereals":["Local grain cleaning and milling","Millet flour production"]}}';
   
-  var res = await fetch('https://api.x.ai/v1/chat/completions', {
+  var res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
     method: 'POST',
     headers: { 'Authorization': 'Bearer ' + key, 'Content-Type': 'application/json' },
     body: JSON.stringify({
-      model: 'grok-2-1212',
-      messages: [{ role: 'user', content: prompt }],
+      model: 'llama-3.3-70b-versatile',
+      messages: [
+        { role: 'system', content: 'You are a helpful assistant that outputs valid JSON only.' },
+        { role: 'user', content: prompt }
+      ],
       temperature: 0.3,
       max_tokens: 3000,
       response_format: { type: 'json_object' }
@@ -121,11 +124,14 @@ async function extractAllNeeds(products) {
   if (!res.ok) {
     var errText = '';
     try { var err = await res.json(); errText = err.error ? (err.error.message || JSON.stringify(err.error)) : res.status; } catch(e){ errText = res.status; }
-    throw new Error('Grok API error: ' + errText);
+    throw new Error('Groq API error: ' + errText);
   }
   
   var data = await res.json();
-  var parsed = JSON.parse(data.choices[0].message.content);
+  var content = data.choices[0].message.content;
+  var jsonMatch = content.match(/```(?:json)?\s*([\s\S]*?)```/);
+  if (jsonMatch) content = jsonMatch[1];
+  var parsed = JSON.parse(content);
   return parsed.needs_map || parsed;
 }
 
@@ -153,11 +159,11 @@ async function processProducts() {
   }
   
   var needsList = [];
-  var needIndex = {}; // productName -> array of { need, needIndex }
+  var needIndex = {};
   
   for (var i = 0; i < products.length; i++) {
     var p = products[i];
-    var needs = needsByProduct[p.name] || [];
+    var needs = needsByProduct[p.name] || needsByProduct[Object.keys(needsByProduct)[i]] || [];
     if (!needs.length) continue;
     needIndex[p.name] = [];
     for (var j = 0; j < needs.length; j++) {

@@ -90,13 +90,13 @@ th, td { border-bottom:1px solid #e5e7eb; padding:8px; text-align:left; } th { b
 <h2>Settings</h2>
 <button onclick="closeSettings()" style="background:none;border:none;font-size:24px;cursor:pointer;color:#666;min-width:auto">&times;</button>
 </div>
-<h3 style="font-size:14px;color:var(--green2);border-bottom:1px solid #e2e8f0;padding-bottom:8px;margin:0 0 12px">&#129302; Grok (xAI) API &mdash; Need Summarization</h3>
-<label>Grok API Key</label>
-<input type="password" id="grokKeyInput" placeholder="xai-..." />
-<p class="hint">Used to summarize product needs. Get a key at <a href="https://console.x.ai" target="_blank" style="color:var(--green2)">console.x.ai</a></p>
+<h3 style="font-size:14px;color:var(--green2);border-bottom:1px solid #e2e8f0;padding-bottom:8px;margin:0 0 12px">&#129302; Groq API &mdash; Need Summarization</h3>
+<label>Groq API Key</label>
+<input type="password" id="groqKeyInput" placeholder="gsk_..." />
+<p class="hint">Used to summarize product needs. Get a free key at <a href="https://console.groq.com" target="_blank" style="color:var(--green2)">console.groq.com</a></p>
 <div style="display:flex;gap:8px;align-items:center;margin-bottom:16px">
-<button id="testGrokBtn" class="secondary" style="font-size:12px;padding:4px 12px;min-width:auto">Test</button>
-<span id="grokTestResult" class="small"></span>
+<button id="testGroqBtn" class="secondary" style="font-size:12px;padding:4px 12px;min-width:auto">Test</button>
+<span id="groqTestResult" class="small"></span>
 </div>
 <h3 style="font-size:14px;color:var(--green2);border-bottom:1px solid #e2e8f0;padding-bottom:8px;margin:0 0 12px">&#127758; AskGRE API &mdash; Solution Matching</h3>
 <label>AskGRE API Key</label>
@@ -194,11 +194,11 @@ document.getElementById('placeName').addEventListener('input',draw); ['prodSelec
 compute(); draw();
 
 // Settings
-function openSettings(){var m=document.getElementById('settingsModal');document.getElementById('grokKeyInput').value=localStorage.getItem('grok_api_key')||'';document.getElementById('greKeyInput').value=localStorage.getItem('gre_api_key')||'';m.style.display='flex'}
+function openSettings(){var m=document.getElementById('settingsModal');document.getElementById('groqKeyInput').value=localStorage.getItem('groq_api_key')||'';document.getElementById('greKeyInput').value=localStorage.getItem('gre_api_key')||'';m.style.display='flex'}
 function closeSettings(){document.getElementById('settingsModal').style.display='none'}
-function saveSettings(){localStorage.setItem('grok_api_key',document.getElementById('grokKeyInput').value);localStorage.setItem('gre_api_key',document.getElementById('greKeyInput').value);var s=document.getElementById('saveStatus');s.style.display='inline';setTimeout(function(){s.style.display='none'},2000)}
-document.getElementById('testGrokBtn').onclick=async function(){var k=document.getElementById('grokKeyInput').value,e=document.getElementById('grokTestResult');if(!k){e.textContent='No key';return}e.textContent='Testing...';try{var r=await fetch('https://api.x.ai/v1/chat/completions',{method:'POST',headers:{'Authorization':'Bearer '+k,'Content-Type':'application/json'},body:JSON.stringify({model:'grok-2-1212',messages:[{role:'user',content:'Say OK'}],max_tokens:10})});e.textContent=r.ok?'OK':'Error '+r.status}catch(ex){e.textContent='Failed'}}
+function saveSettings(){localStorage.setItem('groq_api_key',document.getElementById('groqKeyInput').value);localStorage.setItem('gre_api_key',document.getElementById('greKeyInput').value);var s=document.getElementById('saveStatus');s.style.display='inline';setTimeout(function(){s.style.display='none'},2000)}
+document.getElementById('testGroqBtn').onclick=async function(){var k=document.getElementById('groqKeyInput').value,e=document.getElementById('groqTestResult');if(!k){e.textContent='No key';return}e.textContent='Testing...';try{var r=await fetch('https://api.groq.com/openai/v1/chat/completions',{method:'POST',headers:{'Authorization':'Bearer '+k,'Content-Type':'application/json'},body:JSON.stringify({model:'llama-3.3-70b-versatile',messages:[{role:'user',content:'Say OK'}],max_tokens:10})});e.textContent=r.ok?'OK':'Error '+r.status}catch(ex){e.textContent='Failed'}}
 document.getElementById('testGreBtn').onclick=async function(){var k=document.getElementById('greKeyInput').value,e=document.getElementById('greTestResult');if(!k){e.textContent='No key';return}e.textContent='Testing...';try{var r=await fetch('https://askgre.grameee.org/api/chat',{method:'POST',headers:{'Authorization':'Bearer '+k,'Content-Type':'application/json'},body:JSON.stringify({message:'test'})});e.textContent=r.ok?'OK':'Error '+r.status}catch(ex){e.textContent='Failed'}}
 document.getElementById('settingsModal').onclick=function(e){if(e.target===this)closeSettings()}
-document.getElementById('findSolutionsBtn').onclick=function(){var gk=localStorage.getItem('grok_api_key'),ak=localStorage.getItem('gre_api_key');if(!gk||!ak){alert('Please set both API keys in Settings first.');openSettings();return}var f=products.filter(function(p){return p.opportunity_score>=100});if(!f.length){alert('No products with opportunity score &ge; 100. Try different data.');return}sessionStorage.setItem('solutionsProducts',JSON.stringify(f.map(function(p){return{name:p.name,category:p.category,suggestion:recMap[p.name]||''}})));window.location.href='solutions.html'}
+document.getElementById('findSolutionsBtn').onclick=function(){var gk=localStorage.getItem('groq_api_key'),ak=localStorage.getItem('gre_api_key');if(!gk||!ak){alert('Please set both API keys in Settings first.');openSettings();return}var f=products.filter(function(p){return p.opportunity_score>=100});if(!f.length){alert('No products with opportunity score &ge; 100. Try different data.');return}sessionStorage.setItem('solutionsProducts',JSON.stringify(f.map(function(p){return{name:p.name,category:p.category,suggestion:recMap[p.name]||''}})));window.location.href='solutions.html'}
 </script></body></html>
