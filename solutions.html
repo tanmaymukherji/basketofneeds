@@ -64,8 +64,13 @@ th{background:var(--pale);color:#14532d;position:sticky;top:0}
 <span id="resultCount" class="small"></span>
 <button id="exportBtn" class="secondary" style="min-width:auto;font-size:12px;padding:4px 12px;margin-left:auto">Export to Excel</button>
 </div>
+<div id="stateRow" style="display:flex;align-items:center;gap:10px;margin-bottom:12px;padding:8px 0">
+<label style="font-size:13px;font-weight:600">State:</label>
+<select id="stateSelect" style="padding:6px 10px;border-radius:6px;border:1px solid #cbd5e1;font-size:13px;min-width:180px"></select>
+<button id="searchBtn" class="secondary" style="min-width:auto;padding:6px 18px;font-size:13px">Search Solution Providers</button>
+</div>
 <div style="overflow-x:auto">
-<table id="solutionsTable"><thead><tr><th>Product</th><th>Need (derived)</th><th>Potential Solution Providers</th></tr></thead><tbody></tbody></table>
+<table id="solutionsTable"><thead><tr><th>Product</th><th>Need (derived)</th><th>State</th><th>Potential Solution Providers</th></tr></thead><tbody></tbody></table>
 </div>
 </div>
 
@@ -74,14 +79,14 @@ th{background:var(--pale);color:#14532d;position:sticky;top:0}
 
 <script>
 var products = JSON.parse(sessionStorage.getItem('solutionsProducts') || 'null');
-var lastResults = null;
+var needsData = []; // { productName, category, need, state, row, solutions[] }
+var stateDetected = sessionStorage.getItem('dashboardState') || '';
+
 if (!products || !products.length) {
   document.getElementById('statusCard').style.display = 'none';
   document.getElementById('noDataCard').style.display = 'block';
 } else {
-  (async function(){
-    await processProducts();
-  })();
+  (async function(){ await processProducts(); })();
 }
 
 function updateStatus(title, detail, pct) {
@@ -103,246 +108,194 @@ function escapeHtml(str) {
   return d.innerHTML;
 }
 
+// ---------- Phase 1: Extract needs via Groq ----------
+
 async function extractAllNeeds(products) {
   var key = localStorage.getItem('groq_api_key');
   if (!key) throw new Error('No Groq API key. Add it in Settings.');
-  
-  var prompt = 'You are a rural livelihood analyst. For each product below, extract 2-5 specific, actionable needs from the suggested action text. These needs will be used to search for solution providers in a rural development database.\n\nProducts:\n' + JSON.stringify(products.map(function(p){return{name:p.name,suggestion:p.suggestion}})) + '\n\nReturn a JSON object with a key "needs_map" where keys are product names and values are arrays of need strings. Each need should be a concise, searchable phrase (5-15 words). Example:\n{"needs_map":{"Seeds":["Seedling nursery establishment","Seed supply chain development"],"Cereals":["Local grain cleaning and milling","Millet flour production"]}}';
-  
-  var res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
-    method: 'POST',
-    headers: { 'Authorization': 'Bearer ' + key, 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      model: 'llama-3.3-70b-versatile',
-      messages: [
-        { role: 'system', content: 'You are a helpful assistant that outputs valid JSON only.' },
-        { role: 'user', content: prompt }
+  var prompt = 'You are a rural livelihood analyst. For each product below, extract 2-5 specific, actionable needs from the suggested action text. These needs will be used to search for solution providers in a rural development database.\n\nProducts:\n'+JSON.stringify(products.map(function(p){return{name:p.name,suggestion:p.suggestion}}))+'\n\nReturn a JSON object with a key "needs_map" where keys are product names and values are arrays of need strings. Each need should be a concise, searchable phrase (5-15 words). Example:\n{"needs_map":{"Seeds":["Seedling nursery establishment","Seed supply chain development"],"Cereals":["Local grain cleaning and milling","Millet flour production"]}}';
+  var res = await fetch('https://api.groq.com/openai/v1/chat/completions',{
+    method:'POST',
+    headers:{'Authorization':'Bearer '+key,'Content-Type':'application/json'},
+    body:JSON.stringify({
+      model:'llama-3.3-70b-versatile',
+      messages:[
+        {role:'system',content:'You are a helpful assistant that outputs valid JSON only.'},
+        {role:'user',content:prompt}
       ],
-      temperature: 0.3,
-      max_tokens: 3000,
-      response_format: { type: 'json_object' }
+      temperature:0.3,
+      max_tokens:3000,
+      response_format:{type:'json_object'}
     })
   });
-  
   if (!res.ok) {
-    var errText = '';
-    try { var err = await res.json(); errText = err.error ? (err.error.message || JSON.stringify(err.error)) : res.status; } catch(e){ errText = res.status; }
-    throw new Error('Groq API error: ' + errText);
+    var errText='';
+    try{var err=await res.json();errText=err.error?(err.error.message||JSON.stringify(err.error)):res.status}catch(e){errText=res.status}
+    throw new Error('Groq API error: '+errText);
   }
-  
-  var data = await res.json();
-  var content = data.choices[0].message.content;
-  var jsonMatch = content.match(/```(?:json)?\s*([\s\S]*?)```/);
-  if (jsonMatch) content = jsonMatch[1];
-  var parsed = JSON.parse(content);
-  return parsed.needs_map || parsed;
-}
-
-async function searchAskGRE(query) {
-  var key = localStorage.getItem('gre_api_key');
-  var res = await fetch('https://askgre.grameee.org/api/chat', {
-    method: 'POST',
-    headers: { 'Authorization': 'Bearer ' + key, 'Content-Type': 'application/json' },
-    body: JSON.stringify({ message: query })
-  });
-  if (!res.ok) throw new Error('AskGRE error: ' + res.status);
-  var data = await res.json();
-  return data.solutions || [];
+  var data=await res.json();
+  var content=data.choices[0].message.content;
+  var jsonMatch=content.match(/```(?:json)?\s*([\s\S]*?)```/);
+  if(jsonMatch)content=jsonMatch[1];
+  var parsed=JSON.parse(content);
+  return parsed.needs_map||parsed;
 }
 
 async function processProducts() {
-  updateStatus('Analyzing product needs', 'Calling Groq to extract specific needs from ' + products.length + ' products...', 5);
-  
+  updateStatus('Analyzing product needs','Calling Groq to extract specific needs from '+products.length+' products...',5);
   var needsByProduct;
-  try {
-    needsByProduct = await extractAllNeeds(products);
-  } catch (e) {
-    showError('Failed to analyze needs: ' + e.message);
-    return;
+  try{needsByProduct=await extractAllNeeds(products)}catch(e){showError('Failed to analyze needs: '+e.message);return}
+  var total=0;
+  for(var i=0;i<products.length;i++){
+    var needs=needsByProduct[products[i].name]||needsByProduct[Object.keys(needsByProduct)[i]]||[];
+    if(needs.length)total+=needs.length;
   }
-  
-  var needsList = [];
-  var needIndex = {};
-  
-  for (var i = 0; i < products.length; i++) {
-    var p = products[i];
-    var needs = needsByProduct[p.name] || needsByProduct[Object.keys(needsByProduct)[i]] || [];
-    if (!needs.length) continue;
-    needIndex[p.name] = [];
-    for (var j = 0; j < needs.length; j++) {
-      needIndex[p.name].push({ need: needs[j], idx: needsList.length });
-      needsList.push({ productIdx: i, need: needs[j] });
+  if(total===0){showError('Groq could not extract any needs. Check your API key or try again.');return}
+  var results={};
+  for(var i=0;i<products.length;i++){
+    var p=products[i];
+    var needs=needsByProduct[p.name]||needsByProduct[Object.keys(needsByProduct)[i]]||[];
+    results[p.name]={name:p.name,category:p.category,needs:needs.map(function(n){return{need:n,solutions:[],error:null}})};
+  }
+  updateStatus('Complete','Needs extracted for '+total+' need(s).',100);
+  renderNeedsTable(results);
+}
+
+// ---------- Phase 2: Render needs table with state ----------
+
+var STATES = ['Andhra Pradesh','Arunachal Pradesh','Assam','Bihar','Chhattisgarh','Goa','Gujarat','Haryana','Himachal Pradesh','Jharkhand','Karnataka','Kerala','Madhya Pradesh','Maharashtra','Manipur','Meghalaya','Mizoram','Nagaland','Odisha','Punjab','Rajasthan','Sikkim','Tamil Nadu','Telangana','Tripura','Uttar Pradesh','Uttarakhand','West Bengal','Andaman and Nicobar Islands','Chandigarh','Dadra and Nagar Haveli and Daman and Diu','Delhi','Jammu and Kashmir','Ladakh','Lakshadweep','Puducherry','All India'];
+
+function populateStateDropdown(selected) {
+  var sel=document.getElementById('stateSelect');
+  sel.innerHTML=STATES.map(function(s){return '<option value="'+escapeHtml(s)+'"'+(s===selected?' selected':'')+'>'+escapeHtml(s)+'</option>'}).join('');
+}
+
+function renderNeedsTable(results) {
+  document.getElementById('statusCard').style.display='none';
+  document.getElementById('resultsCard').style.display='block';
+  populateStateDropdown(stateDetected||'Karnataka');
+  var tbody=document.querySelector('#solutionsTable tbody');
+  tbody.innerHTML='';
+  needsData=[];
+  var rowCount=0;
+  for(var key in results){
+    var product=results[key];
+    if(!product.needs||!product.needs.length)continue;
+    for(var i=0;i<product.needs.length;i++){
+      var nr=product.needs[i];
+      var state=stateDetected||'';
+      var tr=document.createElement('tr');
+      tr.innerHTML='<td><b>'+escapeHtml(product.name)+'</b><br><span class="small">'+escapeHtml(product.category)+'</span></td><td class="need-text">'+escapeHtml(nr.need)+'</td><td class="small">'+escapeHtml(state)+'</td><td class="small" style="color:var(--muted)"><i>Waiting to search...</i></td>';
+      tbody.appendChild(tr);
+      needsData.push({productName:product.name,category:product.category,need:nr.need,state:state,row:tr,solutions:[]});
+      rowCount++;
     }
   }
-  
-  var totalNeeds = needsList.length;
-  if (totalNeeds === 0) {
-    showError('Groq could not extract any needs from the products. Check your API key or try again.');
-    return;
-  }
-  
-  var results = {};
-  for (var i = 0; i < products.length; i++) {
-    results[products[i].name] = { name: products[i].name, category: products[i].category, needs: [] };
-  }
-  
-  var completed = 0;
-  
-  for (var n = 0; n < totalNeeds; n++) {
-    var item = needsList[n];
-    var p = products[item.productIdx];
-    var pct = 10 + Math.round((completed / totalNeeds) * 85);
-    updateStatus('Searching solutions for ' + p.name, 'Processing need ' + (completed + 1) + ' of ' + totalNeeds + ': "' + item.need + '"', pct);
-    
-    var solutions = [];
-    var error = null;
-    try {
-      solutions = await searchAskGRE(p.name + ': ' + item.need);
-    } catch (e) {
-      error = e.message;
+  document.getElementById('resultCount').textContent=rowCount+' need'+(rowCount!==1?'s':'')+' extracted';
+  document.getElementById('searchBtn').disabled=false;
+}
+
+// ---------- Phase 3: Search solutions via AskGRE ----------
+
+async function searchSolutions() {
+  var stateSelect=document.getElementById('stateSelect');
+  var state=stateSelect.value;
+  var btn=document.getElementById('searchBtn');
+  btn.disabled=true;
+  btn.textContent='Searching...';
+  for(var i=0;i<needsData.length;i++){needsData[i].state=state;needsData[i].row.cells[2].textContent=state}
+  updateStatus('Searching solution providers','Processing '+needsData.length+' need(s) with state: '+state,0);
+  document.getElementById('statusCard').style.display='block';
+  document.getElementById('resultsCard').style.display='none';
+  var completed=0;
+  for(var i=0;i<needsData.length;i++){
+    var nd=needsData[i];
+    var query=state+' - '+nd.productName+': '+nd.need;
+    var pct=Math.round((completed/needsData.length)*95);
+    updateStatus('Searching for '+nd.productName,'Need '+(i+1)+' of '+needsData.length, pct);
+    var solutions=[];
+    try{
+      var res=await fetch('https://askgre.grameee.org/api/chat',{
+        method:'POST',
+        headers:{'Authorization':'Bearer '+localStorage.getItem('gre_api_key'),'Content-Type':'application/json'},
+        body:JSON.stringify({message:query})
+      });
+      if(!res.ok)throw new Error('AskGRE error: '+res.status);
+      var data=await res.json();
+      solutions=data.solutions||[];
+    }catch(e){}
+    nd.solutions=solutions;
+    var cell=nd.row.cells[3];
+    if(!solutions.length){
+      cell.innerHTML='<span class="small" style="color:var(--muted)">No matching solutions found</span>';
+    }else{
+      var html='<div class="provider-list">';
+      var maxShow=Math.min(solutions.length,5);
+      for(var j=0;j<maxShow;j++){
+        var sol=solutions[j];
+        html+='<div class="provider-item">';
+        if(sol.relevance_score!==undefined&&sol.relevance_score!==null)html+='<span class="score-badge">'+Math.round(sol.relevance_score*100)+'</span> ';
+        var oName=escapeHtml(sol.offering_name||'Solution');
+        if(sol.offering_link)html+='<a href="'+escapeHtml(sol.offering_link)+'" target="_blank" rel="noopener">'+oName+'</a>';
+        else html+='<strong>'+oName+'</strong>';
+        if(sol.provider_name)html+='<br><span class="small">Provider: '+escapeHtml(sol.provider_name)+'</span>';
+        if(sol['6m_type'])html+='<br><span class="small">6M: '+escapeHtml(sol['6m_type'])+'</span>';
+        html+='</div>';
+      }
+      if(solutions.length>5)html+='<div class="small" style="margin-top:4px;color:var(--muted)">+'+(solutions.length-5)+' more</div>';
+      html+='</div>';
+      cell.innerHTML=html;
     }
-    
-    results[p.name].needs.push({ need: item.need, solutions: solutions.slice(0, 5), error: error });
     completed++;
   }
-  
-  updateStatus('Complete', 'All ' + totalNeeds + ' needs processed. Rendering results...', 100);
-  renderResults(results);
+  btn.disabled=false;
+  btn.textContent='Search Solution Providers';
+  updateStatus('Complete','All '+needsData.length+' need(s) processed.',100);
+  document.getElementById('statusCard').style.display='none';
+  document.getElementById('resultsCard').style.display='block';
 }
 
-function renderResults(results) {
-  lastResults = results;
-  document.getElementById('statusCard').style.display = 'none';
-  document.getElementById('resultsCard').style.display = 'block';
-  
-  var tbody = document.querySelector('#solutionsTable tbody');
-  var rowCount = 0;
-  
-  for (var key in results) {
-    var product = results[key];
-    if (!product.needs || !product.needs.length) {
-      var tr = document.createElement('tr');
-      tr.innerHTML = '<td><b>' + escapeHtml(product.name) + '</b><br><span class="small">' + escapeHtml(product.category) + '</span></td><td class="small" style="color:var(--muted)">No needs derived</td><td class="small" style="color:var(--muted)">&mdash;</td>';
-      tbody.appendChild(tr);
-      rowCount++;
-      continue;
-    }
-    for (var i = 0; i < product.needs.length; i++) {
-      var nr = product.needs[i];
-      var tr = document.createElement('tr');
-      var providersHtml = '';
-      
-      if (nr.error) {
-        providersHtml = '<span class="error-msg">' + escapeHtml(nr.error) + '</span>';
-      } else if (!nr.solutions || !nr.solutions.length) {
-        providersHtml = '<span class="small" style="color:var(--muted)">No matching solutions found</span>';
-      } else {
-        providersHtml = '<div class="provider-list">';
-        for (var j = 0; j < nr.solutions.length; j++) {
-          var sol = nr.solutions[j];
-          providersHtml += '<div class="provider-item">';
-          if (sol.relevance_score !== undefined && sol.relevance_score !== null) {
-            providersHtml += '<span class="score-badge">' + Math.round(sol.relevance_score * 100) + '</span> ';
-          }
-          var oName = escapeHtml(sol.offering_name || 'Solution');
-          if (sol.offering_link) {
-            providersHtml += '<a href="' + escapeHtml(sol.offering_link) + '" target="_blank" rel="noopener">' + oName + '</a>';
-          } else {
-            providersHtml += '<strong>' + oName + '</strong>';
-          }
-          if (sol.provider_name) {
-            providersHtml += '<br><span class="small">Provider: ' + escapeHtml(sol.provider_name) + '</span>';
-          }
-          if (sol['6m_type']) {
-            providersHtml += '<br><span class="small">6M: ' + escapeHtml(sol['6m_type']) + '</span>';
-          }
-          providersHtml += '</div>';
-        }
-        providersHtml += '</div>';
-      }
-      
-      tr.innerHTML = '<td><b>' + escapeHtml(product.name) + '</b><br><span class="small">' + escapeHtml(product.category) + '</span></td><td class="need-text">' + escapeHtml(nr.need) + '</td><td>' + providersHtml + '</td>';
-      tbody.appendChild(tr);
-      rowCount++;
-    }
-  }
-  
-  document.getElementById('resultCount').textContent = rowCount + ' need' + (rowCount !== 1 ? 's' : '') + ' mapped';
-}
+// ---------- Navigation & Export ----------
 
-document.getElementById('backBtn').onclick = function(){ window.location.href = 'index.html'; };
-
-document.getElementById('exportBtn').onclick = exportToExcel;
+document.getElementById('backBtn').onclick=function(){window.location.href='index.html'};
+document.getElementById('searchBtn').onclick=searchSolutions;
+document.getElementById('exportBtn').onclick=exportToExcel;
 
 function exportToExcel() {
-  if (!lastResults) return;
-  var placeName = sessionStorage.getItem('dashboardPlaceName') || 'Basket of Needs';
-  var dashProducts = JSON.parse(sessionStorage.getItem('dashboardProducts') || '[]');
-  var demo = JSON.parse(sessionStorage.getItem('dashboardDemo') || '{}');
-  var recMap = JSON.parse(sessionStorage.getItem('dashboardRecMap') || '{}');
-  
-  var wb = XLSX.utils.book_new();
-  
-  // Sheet 1: Solutions
-  var ws1 = [['Product', 'Category', 'Need', 'Provider', 'Offering', 'Relevance Score', '6M Type', 'Link']];
-  for (var key in lastResults) {
-    var prod = lastResults[key];
-    if (!prod.needs || !prod.needs.length) {
-      ws1.push([prod.name, prod.category, '—', '', '', '', '', '']);
-      continue;
-    }
-    for (var i = 0; i < prod.needs.length; i++) {
-      var nr = prod.needs[i];
-      if (!nr.solutions || !nr.solutions.length) {
-        ws1.push([prod.name, prod.category, nr.need, '', '', '', '', '']);
-      } else {
-        for (var j = 0; j < nr.solutions.length; j++) {
-          var sol = nr.solutions[j];
-          ws1.push([
-            prod.name,
-            prod.category,
-            nr.need,
-            sol.provider_name || '',
-            sol.offering_name || '',
-            sol.relevance_score !== undefined ? Math.round(sol.relevance_score * 100) : '',
-            sol['6m_type'] || '',
-            sol.offering_link || ''
-          ]);
-        }
+  if(!needsData.length)return;
+  var placeName=sessionStorage.getItem('dashboardPlaceName')||'Basket of Needs';
+  var dashProducts=JSON.parse(sessionStorage.getItem('dashboardProducts')||'[]');
+  var demo=JSON.parse(sessionStorage.getItem('dashboardDemo')||'{}');
+  var recMap=JSON.parse(sessionStorage.getItem('dashboardRecMap')||'{}');
+  var wb=XLSX.utils.book_new();
+  var ws1=[['Product','Category','Need','State','Provider','Offering','Relevance Score','6M Type','Link']];
+  for(var i=0;i<needsData.length;i++){
+    var nd=needsData[i];
+    if(!nd.solutions||!nd.solutions.length){
+      ws1.push([nd.productName,nd.category,nd.need,nd.state,'','','','','']);
+    }else{
+      for(var j=0;j<nd.solutions.length;j++){
+        var sol=nd.solutions[j];
+        ws1.push([nd.productName,nd.category,nd.need,nd.state,sol.provider_name||'',sol.offering_name||'',sol.relevance_score!==undefined?Math.round(sol.relevance_score*100):'',sol['6m_type']||'',sol.offering_link||'']);
       }
     }
   }
-  var s1 = XLSX.utils.aoa_to_sheet(ws1);
-  s1['!cols'] = [{wch:20},{wch:18},{wch:35},{wch:25},{wch:30},{wch:12},{wch:12},{wch:40}];
-  XLSX.utils.book_append_sheet(wb, s1, 'Solutions');
-  
-  // Sheet 2: Dashboard Products
-  if (dashProducts.length) {
-    var ws2 = [['Product', 'Category', 'Monthly Spend', 'Avg / HH', 'HH Buying', 'Leak Share', 'Local Readiness', 'Feasibility', 'Opportunity Score', 'Recommended Angle']];
-    dashProducts.sort(function(a,b){return b.opportunity_score - a.opportunity_score}).forEach(function(p){
-      ws2.push([p.name, p.category, Math.round(p.total_monthly_sample), Math.round(p.avg_monthly_hh), p.hh_nonzero, (p.leak_share*100).toFixed(1)+'%', (p.readiness_score*100).toFixed(1)+'%', Math.round(p.local_feasibility*100)+'%', Math.round(p.opportunity_score), recMap[p.name]||'']);
-    });
-    var s2 = XLSX.utils.aoa_to_sheet(ws2);
-    s2['!cols'] = [{wch:25},{wch:18},{wch:15},{wch:12},{wch:12},{wch:12},{wch:14},{wch:12},{wch:18},{wch:45}];
-    XLSX.utils.book_append_sheet(wb, s2, 'Dashboard Products');
+  var s1=XLSX.utils.aoa_to_sheet(ws1);
+  s1['!cols']=[{wch:20},{wch:18},{wch:35},{wch:15},{wch:25},{wch:30},{wch:12},{wch:12},{wch:40}];
+  XLSX.utils.book_append_sheet(wb,s1,'Solutions');
+  if(dashProducts.length){
+    var ws2=[['Product','Category','Monthly Spend','Avg / HH','HH Buying','Leak Share','Local Readiness','Feasibility','Opportunity Score','Recommended Angle']];
+    dashProducts.sort(function(a,b){return b.opportunity_score-a.opportunity_score}).forEach(function(p){ws2.push([p.name,p.category,Math.round(p.total_monthly_sample),Math.round(p.avg_monthly_hh),p.hh_nonzero,(p.leak_share*100).toFixed(1)+'%',(p.readiness_score*100).toFixed(1)+'%',Math.round(p.local_feasibility*100)+'%',Math.round(p.opportunity_score),recMap[p.name]||''])});
+    var s2=XLSX.utils.aoa_to_sheet(ws2);
+    s2['!cols']=[{wch:25},{wch:18},{wch:15},{wch:12},{wch:12},{wch:12},{wch:14},{wch:12},{wch:18},{wch:45}];
+    XLSX.utils.book_append_sheet(wb,s2,'Dashboard Products');
   }
-  
-  // Sheet 3: KPIs  
-  var ws3 = [['Metric', 'Value']];
-  if (demo.N) {
-    ws3.push(['Household Responses', demo.N]);
-    ws3.push(['Avg Family Size', demo.avg_family_size.toFixed(1)]);
-    ws3.push(['Median Monthly Income', 'Rs ' + Math.round(demo.median_income).toLocaleString('en-IN')]);
-    ws3.push(['Mean Monthly Income', 'Rs ' + Math.round(demo.mean_income).toLocaleString('en-IN')]);
-    ws3.push(['Avg Land Owned (acres)', demo.avg_land.toFixed(2)]);
-    ws3.push(['Total Mapped Monthly Spend', 'Rs ' + Math.round(demo.total_spend).toLocaleString('en-IN')]);
-    ws3.push(['Avg Spend / Household', 'Rs ' + Math.round(demo.total_spend/(demo.N||1)).toLocaleString('en-IN')]);
-  }
-  var s3 = XLSX.utils.aoa_to_sheet(ws3);
-  s3['!cols'] = [{wch:30},{wch:20}];
-  XLSX.utils.book_append_sheet(wb, s3, 'KPIs');
-  
-  XLSX.writeFile(wb, placeName + ' - Solutions.xlsx');
+  var ws3=[['Metric','Value']];
+  if(demo.N){ws3.push(['Household Responses',demo.N]);ws3.push(['Avg Family Size',demo.avg_family_size.toFixed(1)]);ws3.push(['Median Monthly Income','Rs '+Math.round(demo.median_income).toLocaleString('en-IN')]);ws3.push(['Mean Monthly Income','Rs '+Math.round(demo.mean_income).toLocaleString('en-IN')]);ws3.push(['Avg Land Owned (acres)',demo.avg_land.toFixed(2)]);ws3.push(['Total Mapped Monthly Spend','Rs '+Math.round(demo.total_spend).toLocaleString('en-IN')]);ws3.push(['Avg Spend / Household','Rs '+Math.round(demo.total_spend/(demo.N||1)).toLocaleString('en-IN')])}
+  var s3=XLSX.utils.aoa_to_sheet(ws3);
+  s3['!cols']=[{wch:30},{wch:20}];
+  XLSX.utils.book_append_sheet(wb,s3,'KPIs');
+  XLSX.writeFile(wb,placeName+' - Solutions.xlsx');
 }
 </script>
 </body></html>
