@@ -148,7 +148,7 @@ async function searchAskGRE(query) {
 }
 
 async function processProducts() {
-  updateStatus('Analyzing product needs', 'Calling Grok AI to extract specific needs from ' + products.length + ' products...', 5);
+  updateStatus('Analyzing product needs', 'Calling Groq to extract specific needs from ' + products.length + ' products...', 5);
   
   var needsByProduct;
   try {
@@ -174,7 +174,7 @@ async function processProducts() {
   
   var totalNeeds = needsList.length;
   if (totalNeeds === 0) {
-    showError('Grok could not extract any needs from the products. Check your API key or try again.');
+    showError('Groq could not extract any needs from the products. Check your API key or try again.');
     return;
   }
   
