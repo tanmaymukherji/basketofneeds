@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
-<title>Potential Solution Match - Basket of Needs</title>
+<title>Potential Solution Match - Buzz Women</title>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <style>
 :root{--green:#164e3b;--green2:#0f766e;--pale:#ecfdf5;--muted:#64748b;--bg:#f6f8f5}
@@ -32,7 +32,7 @@ th{background:var(--pale);color:#14532d;position:sticky;top:0}
 @media(max-width:900px){.container{padding:12px}.need-text{max-width:none}th,td{font-size:12px;padding:6px 4px}}
 </style>
 </head><body>
-<header><h1>Potential Solution Match</h1><p>GRE Curated Solutions for high-opportunity Products and Services</p></header>
+<header style="position:relative"><h1>Potential Solution Match</h1><p>GRE Curated Solutions for high-opportunity Products and Services</p></header>
 <div class="container">
 
 <div class="card" style="padding:12px 16px">
@@ -73,13 +73,16 @@ th{background:var(--pale);color:#14532d;position:sticky;top:0}
 </div>
 </div>
 
-<div class="footer">Powered by Groq need analysis and AskGRE solution matching.</div>
+<div class="footer">Buzz Women - Powered by Groq need analysis and AskGRE solution matching.</div>
 </div>
 
 <script>
 var products = JSON.parse(sessionStorage.getItem('solutionsProducts') || 'null');
 var needsData = []; // { productName, category, need, state, row, solutions[] }
 var stateDetected = sessionStorage.getItem('dashboardState') || '';
+var dashboardVillage = sessionStorage.getItem('dashboardVillage') || '';
+var dashboardTaluk = sessionStorage.getItem('dashboardTaluk') || '';
+var dashboardGP = sessionStorage.getItem('dashboardGP') || '';
 
 if (!products || !products.length) {
   document.getElementById('statusCard').style.display = 'none';
@@ -206,7 +209,12 @@ async function searchSolutions() {
   var completed=0;
   for(var i=0;i<needsData.length;i++){
     var nd=needsData[i];
-    var query=state+' - '+nd.productName+': '+nd.need;
+    var locParts=[];
+    if(dashboardVillage)locParts.push(dashboardVillage);
+    if(dashboardTaluk&&dashboardTaluk!==dashboardVillage)locParts.push(dashboardTaluk);
+    if(dashboardGP&&dashboardGP!==dashboardVillage&&dashboardGP!==dashboardTaluk)locParts.push(dashboardGP);
+    locParts.push(state);
+    var query=locParts.join(', ')+' - '+nd.productName+': '+nd.need;
     btn.textContent='Searching '+(i+1)+'/'+needsData.length+'...';
     var solutions=[];
     try{
@@ -260,20 +268,21 @@ function exportToExcel() {
   var demo=JSON.parse(sessionStorage.getItem('dashboardDemo')||'{}');
   var recMap=JSON.parse(sessionStorage.getItem('dashboardRecMap')||'{}');
   var wb=XLSX.utils.book_new();
-  var ws1=[['Product','Category','Need','State','Provider','Offering','Relevance Score','6M Type','Link']];
+  var village=sessionStorage.getItem('dashboardVillage')||'';
+  var ws1=[['Product','Category','Need','State','Village','Provider','Offering','Relevance Score','6M Type','Link']];
   for(var i=0;i<needsData.length;i++){
     var nd=needsData[i];
     if(!nd.solutions||!nd.solutions.length){
-      ws1.push([nd.productName,nd.category,nd.need,nd.state,'','','','','']);
+      ws1.push([nd.productName,nd.category,nd.need,nd.state,village,'','','','','']);
     }else{
       for(var j=0;j<nd.solutions.length;j++){
         var sol=nd.solutions[j];
-        ws1.push([nd.productName,nd.category,nd.need,nd.state,sol.provider_name||'',sol.offering_name||'',sol.relevance_score!==undefined?Math.round(sol.relevance_score*100):'',sol['6m_type']||'',sol.offering_link||'']);
+        ws1.push([nd.productName,nd.category,nd.need,nd.state,village,sol.provider_name||'',sol.offering_name||'',sol.relevance_score!==undefined?Math.round(sol.relevance_score*100):'',sol['6m_type']||'',sol.offering_link||'']);
       }
     }
   }
   var s1=XLSX.utils.aoa_to_sheet(ws1);
-  s1['!cols']=[{wch:20},{wch:18},{wch:35},{wch:15},{wch:25},{wch:30},{wch:12},{wch:12},{wch:40}];
+  s1['!cols']=[{wch:20},{wch:18},{wch:35},{wch:15},{wch:20},{wch:25},{wch:30},{wch:12},{wch:12},{wch:40}];
   XLSX.utils.book_append_sheet(wb,s1,'Solutions');
   if(dashProducts.length){
     var ws2=[['Product','Category','Monthly Spend','Avg / HH','HH Buying','Leak Share','Local Readiness','Feasibility','Opportunity Score','Recommended Angle']];

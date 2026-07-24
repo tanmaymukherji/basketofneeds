@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>Compare Villages - Buzz Women Basket of Goods and Services</title>
+<script src="https://cdn.plot.ly/plotly-2.35.2.min.js"></script>
+<style>
+:root{--green:#164e3b;--green2:#0f766e;--pale:#ecfdf5;--muted:#64748b;--bg:#f6f8f5}
+body{font-family:Arial,sans-serif;margin:0;background:var(--bg);color:#1f2937}
+header{background:var(--green);color:white;padding:24px 32px;position:relative}
+header h1{margin:0 0 6px;font-size:28px}header p{margin:0;opacity:.9}
+.container{padding:22px 32px;max-width:1600px;margin:auto}
+.card{background:white;border-radius:14px;padding:16px;box-shadow:0 1px 4px rgba(0,0,0,.08);margin-bottom:16px}
+.card h3{margin:0 0 8px;font-size:15px}
+button{padding:8px 10px;border:1px solid #cbd5e1;border-radius:8px;min-width:auto}
+button.secondary{background:#e2e8f0;color:#0f172a;border:1px solid #cbd5e1}
+.small{font-size:12px;color:var(--muted)}
+.footer{color:var(--muted);padding:30px 0 10px;font-size:12px;text-align:center}
+table{width:100%;border-collapse:collapse;font-size:12px}
+th,td{border-bottom:1px solid #e5e7eb;padding:6px 6px;text-align:left}
+th{background:var(--pale);color:#14532d;position:sticky;top:0}
+.kpis{display:grid;grid-template-columns:repeat(7,1fr);gap:8px;margin:0 0 12px}
+.kpi .label{color:var(--muted);font-size:10px;text-transform:uppercase;letter-spacing:.04em}
+.kpi .value{font-size:16px;font-weight:700;color:var(--green);margin-top:2px}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.grid2-cols{display:grid;grid-template-columns:1fr 1fr;gap:20px;align-items:start}
+.column{min-width:0}
+.column h2{font-size:20px;color:var(--green);margin:0 0 12px;padding-bottom:8px;border-bottom:2px solid var(--pale)}
+@media(max-width:1100px){.grid2-cols{grid-template-columns:1fr}.container{padding:12px}.kpis{grid-template-columns:repeat(4,1fr)}}
+</style>
+</head><body>
+<header><h1>Buzz Women - Village Comparison</h1><p>Side-by-side analysis of two selected villages</p></header>
+<div class="container">
+<div><button id="backBtn" class="secondary" style="margin-bottom:16px">&larr; Back to Dashboard</button></div>
+<div id="content" class="grid2-cols">
+<div class="column" id="colA"><h2 id="titleA">Village A</h2></div>
+<div class="column" id="colB"><h2 id="titleB">Village B</h2></div>
+</div>
+<div class="footer">Data computed from the uploaded survey. Charts refresh when you change the village selection.</div>
+</div>
+
+<script>
+// ---------- Utility Functions ----------
+function num(x){if(x===null||x===undefined||x==='')return 0;var s=String(x).replace(/[,₹\s]/g,'');var n=parseFloat(s);return isNaN(n)?0:n}
+function fmtMoney(n){return '₹'+Math.round(n).toLocaleString('en-IN')}
+function fmtPct(n){return Math.round(n*100)+'%'}
+
+// ---------- Load Data ----------
+var dataA = JSON.parse(sessionStorage.getItem('compareVillageA')||'null');
+var dataB = JSON.parse(sessionStorage.getItem('compareVillageB')||'null');
+var recMap = JSON.parse(sessionStorage.getItem('dashboardRecMap')||'{}');
+
+if(!dataA||!dataB||!dataA.products||!dataB.products){
+  document.getElementById('content').innerHTML='<div class="card"><p>No comparison data found. Please go to the dashboard, select two villages, and click <b>Compare 2 Villages</b>.</p></div>';
+  document.getElementById('backBtn').style.display='block';
+}
+
+// ---------- Render One Column ----------
+function renderColumn(data, prefix){
+  if(!data||!data.products)return;
+  var products=data.products; var demo=data.demo; var categories=data.categories||[];
+  var col=document.getElementById('col'+(prefix==='A'?1:2));
+  var el=document.getElementById('title'+prefix);
+  if(el)el.textContent=data.name||'Village '+prefix;
+  
+  // KPIs
+  var kpiHtml='<div class="kpis">';
+  var kpiItems=[
+    {l:'Responses',v:demo.N},
+    {l:'Avg family',v:demo.avg_family_size?(demo.avg_family_size).toFixed(1):'-'},
+    {l:'Med income',v:fmtMoney(demo.median_income||0)},
+    {l:'Mean income',v:fmtMoney(demo.mean_income||0)},
+    {l:'Avg land',v:demo.avg_land?(demo.avg_land).toFixed(2)+' ac':'-'},
+    {l:'Total spend',v:fmtMoney(demo.total_spend||0)},
+    {l:'Avg spend/HH',v:fmtMoney(demo.total_spend&&demo.N?(demo.total_spend)/(demo.N):0)}
+  ];
+  kpiItems.forEach(function(k){kpiHtml+='<div class="card kpi"><div class="label">'+k.l+'</div><div class="value">'+k.v+'</div></div>'});
+  kpiHtml+='</div>';
+  
+  var html='<div class="card"><div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">';
+  html+='<div><div id="spend'+prefix+'" style="height:320px"></div></div>';
+  html+='<div><div id="opp'+prefix+'" style="height:320px"></div></div>';
+  html+='<div><div id="leak'+prefix+'" style="height:320px"></div></div>';
+  html+='<div><div id="cat'+prefix+'" style="height:320px"></div></div>';
+  html+='</div></div>';
+  
+  // Product table
+  html+='<div class="card" style="overflow-x:auto"><h3>Product opportunity table</h3><table><thead><tr><th>Product</th><th>Category</th><th>Monthly spend</th><th>Avg/HH</th><th>HH buying</th><th>Leak</th><th>Readiness</th><th>Feas.</th><th>Opp score</th><th>Angle</th></tr></thead><tbody>';
+  var sorted=[...products].sort(function(a,b){return b.opportunity_score-a.opportunity_score});
+  sorted.forEach(function(p){html+='<tr><td><b>'+p.name+'</b></td><td>'+p.category+'</td><td>'+fmtMoney(p.total_monthly_sample)+'</td><td>'+fmtMoney(p.avg_monthly_hh)+'</td><td>'+p.hh_nonzero+'</td><td>'+fmtPct(p.leak_share)+'</td><td>'+fmtPct(p.readiness_score)+'</td><td>'+Math.round(p.local_feasibility*100)+'%</td><td>'+Math.round(p.opportunity_score).toLocaleString('en-IN')+'</td><td class="small">'+(recMap[p.name]||'Assess locally')+'</td></tr>'});
+  html+='</tbody></table></div>';
+  
+  col.innerHTML=kpiHtml+html;
+  
+  // Draw charts
+  var layout={margin:{l:100,r:12,t:10,b:40},paper_bgcolor:'white',plot_bgcolor:'white'};
+  
+  var topSpend=[...products].sort(function(a,b){return b.total_monthly_sample-a.total_monthly_sample}).slice(0,10).reverse();
+  Plotly.newPlot('spend'+prefix,[{type:'bar',orientation:'h',x:topSpend.map(function(p){return p.total_monthly_sample}),y:topSpend.map(function(p){return p.name}),hovertemplate:'%{y}<br>%{x:,.0f}<extra></extra>'}],Object.assign({},layout,{xaxis:{title:'Monthly spend (₹)'}}),{displayModeBar:false,responsive:true});
+  
+  var topOpp=[...products].sort(function(a,b){return b.opportunity_score-a.opportunity_score}).slice(0,10).reverse();
+  Plotly.newPlot('opp'+prefix,[{type:'bar',orientation:'h',x:topOpp.map(function(p){return p.opportunity_score}),y:topOpp.map(function(p){return p.name}),hovertemplate:'%{y}<br>Score %{x:,.0f}<extra></extra>'}],Object.assign({},layout,{xaxis:{title:'Opportunity score'}}),{displayModeBar:false,responsive:true});
+  
+  var leak=[...products].sort(function(a,b){return b.leak_share-a.leak_share}).slice(0,10).reverse();
+  Plotly.newPlot('leak'+prefix,[{type:'bar',orientation:'h',x:leak.map(function(p){return p.leak_share*100}),y:leak.map(function(p){return p.name}),hovertemplate:'%{y}<br>%{x:.0f}% outside<extra></extra>'}],Object.assign({},layout,{xaxis:{title:'% outside village'}}),{displayModeBar:false,responsive:true});
+  
+  if(categories.length){
+    Plotly.newPlot('cat'+prefix,[{type:'pie',labels:categories.map(function(c){return c.category}),values:categories.map(function(c){return c.total_monthly_sample}),hole:.45}],{margin:{l:20,r:20,t:10,b:20},paper_bgcolor:'white'},{displayModeBar:false,responsive:true});
+  }
+}
+
+renderColumn(dataA,'A');
+renderColumn(dataB,'B');
+
+document.getElementById('backBtn').onclick=function(){window.location.href='index.html'};
+</script>
+</body></html>
