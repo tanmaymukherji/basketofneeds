@@ -36,6 +36,7 @@ th, td { border-bottom:1px solid #e5e7eb; padding:8px; text-align:left; } th { b
 .village-option{display:flex;align-items:center;gap:7px;font-size:13px;color:#334155;min-width:0}
 .village-option input{min-width:auto;width:auto;margin:0}
 .village-option span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.compare-table-wrap{max-height:360px;overflow:auto;margin-top:12px}
 </style></head><body>
 <header style="position:relative"><h1 id="title">Buzz Women - Basket of Goods and Services</h1><p>Upload survey data to analyse consumption patterns, leakage, local-readiness and income-potential across villages. Compare villages side-by-side and find solution providers for high-opportunity products.</p><button id="settingsBtn" class="gear-btn" onclick="openSettings()">&#9881;</button></header>
 <div class="container">
@@ -74,6 +75,17 @@ th, td { border-bottom:1px solid #e5e7eb; padding:8px; text-align:left; } th { b
  <div class="grid2" style="margin-top:16px">
    <div class="card"><h3>Leakage: products mostly bought outside village</h3><div id="chartLeak" style="height:420px"></div></div>
    <div class="card"><h3>Spend by category</h3><div id="chartCat" style="height:420px"></div></div>
+ </div>
+ <div id="crossVillageCard" class="card" style="margin-top:16px;display:none">
+   <h3>Compare spend pools and products across villages</h3>
+   <div class="controls">
+     <div><label>Compare</label><select id="compareKind"><option value="category">Product category</option><option value="product">Product</option></select></div>
+     <div><label>Spend pool / product</label><select id="compareItem"></select></div>
+     <button id="runCrossVillageCompare" class="secondary" style="min-width:auto">Show Village Statistics</button>
+   </div>
+   <p class="small" style="margin:8px 0 0">Uses checked villages when any are ticked; otherwise compares all villages. You can also click a slice in the Spend by category chart.</p>
+   <div id="crossVillageChart" style="height:420px;margin-top:8px"></div>
+   <div class="compare-table-wrap"><table id="crossVillageTable"><thead><tr><th>Village</th><th>Responses</th><th>Total monthly spend</th><th>Avg / HH</th><th>HH buying</th><th>Leak share</th><th>Local readiness</th><th>Opportunity score</th></tr></thead><tbody></tbody></table></div>
  </div>
  <div class="card" style="margin-top:16px">
    <h3>Income potential simulator</h3>
@@ -130,7 +142,7 @@ th, td { border-bottom:1px solid #e5e7eb; padding:8px; text-align:left; } th { b
 <script>
 const PRODUCT_CONFIG = [{"name": "Seeds", "category": "Farm Inputs", "purchase_col": 14, "source_col": 38, "willing_col": 62, "spend_col": 86, "local_feasibility": 0.7, "default_capture_rate": 0.43, "default_margin": 0.22}, {"name": "Fertilizers", "category": "Farm Inputs", "purchase_col": 15, "source_col": 39, "willing_col": 63, "spend_col": 87, "local_feasibility": 0.7, "default_capture_rate": 0.38, "default_margin": 0.22}, {"name": "Pesticides / Weedicides", "category": "Farm Inputs", "purchase_col": 16, "source_col": 40, "willing_col": 64, "spend_col": 88, "local_feasibility": 0.35, "default_capture_rate": 0.45, "default_margin": 0.22}, {"name": "Farm equipment rental/purchase", "category": "Farm Inputs", "purchase_col": 17, "source_col": 41, "willing_col": 65, "spend_col": 89, "local_feasibility": 0.7, "default_capture_rate": 0.37, "default_margin": 0.35}, {"name": "Vegetables", "category": "Raw Food", "purchase_col": 19, "source_col": 43, "willing_col": 67, "spend_col": 90, "local_feasibility": 1.0, "default_capture_rate": 0.38, "default_margin": 0.18}, {"name": "Fruits", "category": "Raw Food", "purchase_col": 20, "source_col": 44, "willing_col": 68, "spend_col": 91, "local_feasibility": 1.0, "default_capture_rate": 0.44, "default_margin": 0.18}, {"name": "Cereals", "category": "Raw Food", "purchase_col": 21, "source_col": 45, "willing_col": 69, "spend_col": 92, "local_feasibility": 1.0, "default_capture_rate": 0.43, "default_margin": 0.18}, {"name": "Milk & dairy", "category": "Raw Food", "purchase_col": 22, "source_col": 46, "willing_col": 70, "spend_col": 93, "local_feasibility": 1.0, "default_capture_rate": 0.34, "default_margin": 0.18}, {"name": "Meat / Fish / Eggs", "category": "Raw Food", "purchase_col": 23, "source_col": 47, "willing_col": 71, "spend_col": 94, "local_feasibility": 1.0, "default_capture_rate": 0.4, "default_margin": 0.18}, {"name": "Cooking oil", "category": "Raw Food", "purchase_col": 24, "source_col": 48, "willing_col": 72, "spend_col": 95, "local_feasibility": 0.7, "default_capture_rate": 0.54, "default_margin": 0.18}, {"name": "Spices / masala", "category": "Raw Food", "purchase_col": 25, "source_col": 49, "willing_col": 73, "spend_col": 96, "local_feasibility": 1.0, "default_capture_rate": 0.54, "default_margin": 0.18}, {"name": "Packaged snacks", "category": "Processed Food", "purchase_col": 26, "source_col": 50, "willing_col": 74, "spend_col": 97, "local_feasibility": 0.7, "default_capture_rate": 0.48, "default_margin": 0.25}, {"name": "Beverages", "category": "Processed Food", "purchase_col": 27, "source_col": 51, "willing_col": 75, "spend_col": 98, "local_feasibility": 0.7, "default_capture_rate": 0.47, "default_margin": 0.25}, {"name": "Ready-to-cook items", "category": "Processed Food", "purchase_col": 28, "source_col": 52, "willing_col": 76, "spend_col": 99, "local_feasibility": 0.7, "default_capture_rate": 0.51, "default_margin": 0.25}, {"name": "Personal care", "category": "Non-Food Essentials", "purchase_col": 29, "source_col": 53, "willing_col": 77, "spend_col": 100, "local_feasibility": 0.7, "default_capture_rate": 0.54, "default_margin": 0.2}, {"name": "Cleaning products", "category": "Non-Food Essentials", "purchase_col": 30, "source_col": 54, "willing_col": 78, "spend_col": 101, "local_feasibility": 0.7, "default_capture_rate": 0.55, "default_margin": 0.2}, {"name": "Clothing", "category": "Non-Food Essentials", "purchase_col": 31, "source_col": 55, "willing_col": 79, "spend_col": 102, "local_feasibility": 0.35, "default_capture_rate": 0.54, "default_margin": 0.2}, {"name": "Footwear", "category": "Non-Food Essentials", "purchase_col": 32, "source_col": 56, "willing_col": 80, "spend_col": 103, "local_feasibility": 0.35, "default_capture_rate": 0.54, "default_margin": 0.2}, {"name": "Household items", "category": "Non-Food Essentials", "purchase_col": 33, "source_col": 57, "willing_col": 81, "spend_col": 104, "local_feasibility": 0.35, "default_capture_rate": 0.53, "default_margin": 0.2}, {"name": "Education / stationery", "category": "Non-Food Essentials", "purchase_col": 34, "source_col": 58, "willing_col": 82, "spend_col": 105, "local_feasibility": 0.35, "default_capture_rate": 0.49, "default_margin": 0.2}, {"name": "Energy", "category": "Non-Food Essentials", "purchase_col": 35, "source_col": 59, "willing_col": 83, "spend_col": 106, "local_feasibility": 0.15, "default_capture_rate": 0.51, "default_margin": 0.05}, {"name": "Mobile recharge", "category": "Non-Food Essentials", "purchase_col": 36, "source_col": 60, "willing_col": 84, "spend_col": 107, "local_feasibility": 0.15, "default_capture_rate": 0.37, "default_margin": 0.05}, {"name": "Health & hygiene", "category": "Non-Food Essentials", "purchase_col": 37, "source_col": 61, "willing_col": 85, "spend_col": 108, "local_feasibility": 0.7, "default_capture_rate": 0.46, "default_margin": 0.2}];
 let headers = []; let rows = []; let allRows = []; let filteredRows = []; let products = []; let categories = []; let demo = {};
-let villageSummaries = {}; let villageMeta = {}; let selectedVillageName = '';
+let villageSummaries = {}; let villageMeta = {}; let selectedVillageName = ''; let aggregateSummary = null;
 let fieldIndex = { district:3, taluk:4, gp:5, village:6, familySize:9, land:10, income:12 };
 const recMap = {
  'Cereals':'Local grain/millet cleaning, milling, flour mixes and ready-to-cook packs',
@@ -254,7 +266,9 @@ function draw(){
  let leak=[...products].sort((a,b)=>b.leak_share-a.leak_share).slice(0,15).reverse();
  Plotly.newPlot('chartLeak',[{type:'bar',orientation:'h',x:leak.map(p=>p.leak_share*100),y:leak.map(p=>p.name),hovertemplate:'%{y}<br>%{x:.0f}% outside village<extra></extra>'}],{...layout,xaxis:{title:'% households buying outside village'}},{displayModeBar:false,responsive:true});
  Plotly.newPlot('chartCat',[{type:'pie',labels:categories.map(c=>c.category),values:categories.map(c=>c.total_monthly_sample),hole:.45}],{margin:{l:20,r:20,t:10,b:20},paper_bgcolor:'white'},{displayModeBar:false,responsive:true});
+ document.getElementById('chartCat').on('plotly_click',function(ev){ if(ev.points&&ev.points[0]){ document.getElementById('compareKind').value='category'; populateCompareItems(); document.getElementById('compareItem').value=ev.points[0].label; renderCrossVillageCompare(); }});
  refreshSelectors(); updateScenario(); fillTable(); fillInterpretation();
+ populateCompareItems();
 }
 function refreshSelectors(){
  const prodSel=document.getElementById('prodSelect'), old=prodSel.value; prodSel.innerHTML=''; [...products].sort((a,b)=>b.opportunity_score-a.opportunity_score).forEach(p=>{let o=document.createElement('option'); o.value=p.name; o.textContent=p.name; prodSel.appendChild(o);}); if([...prodSel.options].some(o=>o.value===old)) prodSel.value=old;
@@ -307,9 +321,13 @@ function buildVillageCaches(){
   Object.keys(groups).forEach(function(v){villageSummaries[v]=computeForRows(groups[v])});
 }
 
+function getAggregateSummary(){
+  return aggregateSummary||{products:products,categories:categories,demo:demo};
+}
+
 function persistDashboardState(){
   if(!products.length)return;
-  sessionStorage.setItem('basketDashboardState',JSON.stringify({products:products,categories:categories,demo:demo,villageSummaries:villageSummaries,villageMeta:villageMeta,selectedVillageName:selectedVillageName}));
+  sessionStorage.setItem('basketDashboardState',JSON.stringify({products:products,categories:categories,demo:demo,aggregateSummary:getAggregateSummary(),villageSummaries:villageSummaries,villageMeta:villageMeta,selectedVillageName:selectedVillageName}));
   sessionStorage.setItem('dashboardProducts',JSON.stringify(products));
   sessionStorage.setItem('dashboardDemo',JSON.stringify(demo));
   sessionStorage.setItem('dashboardRecMap',JSON.stringify(recMap));
@@ -320,9 +338,11 @@ function restoreDashboardState(){
   var saved=JSON.parse(sessionStorage.getItem('basketDashboardState')||'null');
   if(!saved||!saved.products||!saved.demo)return false;
   products=saved.products||[]; categories=saved.categories||[]; demo=saved.demo||{};
+  aggregateSummary=saved.aggregateSummary||{products:products,categories:categories,demo:demo};
   villageSummaries=saved.villageSummaries||{}; villageMeta=saved.villageMeta||{};
   selectedVillageName=saved.selectedVillageName||'';
   document.getElementById('villageFilterRow').style.display='block';
+  document.getElementById('crossVillageCard').style.display='block';
   populateVillageChoices();
   draw();
   return true;
@@ -350,12 +370,58 @@ function showAllVillages(){
   document.querySelectorAll('.villageCheck').forEach(function(el){el.checked=false});
   if(allRows.length){filteredRows=allRows.slice(); compute();}
   else{
-    var saved=JSON.parse(sessionStorage.getItem('basketDashboardState')||'null');
-    if(saved){products=saved.products||products; categories=saved.categories||categories; demo=saved.demo||demo}
+    var summary=getAggregateSummary();
+    products=summary.products||products; categories=summary.categories||categories; demo=summary.demo||demo;
   }
   populateVillageChoices();
   draw();
   persistDashboardState();
+}
+
+function populateCompareItems(){
+  var sel=document.getElementById('compareItem');
+  if(!sel)return;
+  var old=sel.value;
+  var summary=getAggregateSummary();
+  var items=(document.getElementById('compareKind').value==='category')
+    ? (summary.categories||[]).map(function(c){return c.category})
+    : (summary.products||[]).map(function(p){return p.name});
+  items=[...new Set(items)].sort();
+  sel.innerHTML=items.map(function(x){return '<option value="'+escapeHtml(x)+'">'+escapeHtml(x)+'</option>'}).join('');
+  if(items.indexOf(old)>=0)sel.value=old;
+}
+
+function getCrossVillageNames(){
+  var selected=getSelectedVillages();
+  return selected.length?selected:getVillageNames();
+}
+
+function metricForVillage(summary, kind, item){
+  if(!summary)return null;
+  if(kind==='category'){
+    var cat=(summary.categories||[]).find(function(c){return c.category===item});
+    return {name:item, responses:summary.demo?summary.demo.N:0, total:cat?cat.total_monthly_sample:0, avg:cat?cat.avg_monthly_hh:0, hh:'-', leak:'-', readiness:'-', opp:'-'};
+  }
+  var p=(summary.products||[]).find(function(x){return x.name===item});
+  return {name:item, responses:summary.demo?summary.demo.N:0, total:p?p.total_monthly_sample:0, avg:p?p.avg_monthly_hh:0, hh:p?p.hh_nonzero:'-', leak:p?fmtPct(p.leak_share):'-', readiness:p?fmtPct(p.readiness_score):'-', opp:p?Math.round(p.opportunity_score).toLocaleString('en-IN'):'-'};
+}
+
+function renderCrossVillageCompare(){
+  var card=document.getElementById('crossVillageCard');
+  if(!card||!Object.keys(villageSummaries).length)return;
+  card.style.display='block';
+  var kind=document.getElementById('compareKind').value;
+  var item=document.getElementById('compareItem').value;
+  if(!item){populateCompareItems(); item=document.getElementById('compareItem').value;}
+  var names=getCrossVillageNames();
+  var rows=names.map(function(v){
+    var m=metricForVillage(villageSummaries[v],kind,item)||{};
+    return Object.assign({village:v},m);
+  }).filter(function(r){return r.responses!==undefined});
+  rows.sort(function(a,b){return b.total-a.total});
+  Plotly.newPlot('crossVillageChart',[{type:'bar',orientation:'h',x:rows.map(function(r){return r.total}).reverse(),y:rows.map(function(r){return r.village}).reverse(),hovertemplate:'%{y}<br>%{x:,.0f}<extra></extra>'}],{margin:{l:150,r:20,t:10,b:45},paper_bgcolor:'white',plot_bgcolor:'white',xaxis:{title:'Monthly spend (₹)'}},{displayModeBar:false,responsive:true});
+  var tbody=document.querySelector('#crossVillageTable tbody');
+  tbody.innerHTML=rows.map(function(r){return '<tr><td><b>'+escapeHtml(r.village)+'</b></td><td>'+r.responses+'</td><td>'+fmtMoney(r.total||0)+'</td><td>'+fmtMoney(r.avg||0)+'</td><td>'+r.hh+'</td><td>'+r.leak+'</td><td>'+r.readiness+'</td><td>'+r.opp+'</td></tr>'}).join('');
 }
 
 function compareCheckedVillages(){
@@ -391,9 +457,10 @@ document.getElementById('loadBtn').onclick=function(){
         if(headers.length<109)throw new Error('Uploaded file has '+headers.length+' columns; expected at least 109.');
         resolveWorkbookColumns();
         allRows=rows.filter(validRow); filteredRows=allRows.slice(); selectedVillageName='';
-        compute(); buildVillageCaches();
+        compute(); aggregateSummary={products:products,categories:categories,demo:demo}; buildVillageCaches();
         hideMsg(); populateVillageChoices();
         document.getElementById('villageFilterRow').style.display='block';
+        document.getElementById('crossVillageCard').style.display='block';
         draw(); persistDashboardState();
       }catch(err){showMsg('Could not refresh: '+err.message)}
     };
@@ -407,6 +474,8 @@ function hideMsg(){document.getElementById('uploadMsg').style.display='none'}
 document.getElementById('applyVillageFilter').onclick=applyVillageFilter;
 document.getElementById('showAllVillages').onclick=showAllVillages;
 document.getElementById('compareBtn').onclick=compareCheckedVillages;
+document.getElementById('compareKind').onchange=function(){populateCompareItems(); renderCrossVillageCompare();};
+document.getElementById('runCrossVillageCompare').onclick=renderCrossVillageCompare;
 ['prodSelect','hh','capture','margin','groupShare'].forEach(function(id){document.getElementById(id).addEventListener('change',updateScenario)});
 ['catFilter','minOpp'].forEach(function(id){document.getElementById(id).addEventListener('change',fillTable)});
 
