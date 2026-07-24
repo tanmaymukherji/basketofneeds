@@ -125,6 +125,7 @@ th, td { border-bottom:1px solid #e5e7eb; padding:8px; text-align:left; } th { b
 <script>
 const PRODUCT_CONFIG = [{"name": "Seeds", "category": "Farm Inputs", "purchase_col": 14, "source_col": 38, "willing_col": 62, "spend_col": 86, "local_feasibility": 0.7, "default_capture_rate": 0.43, "default_margin": 0.22}, {"name": "Fertilizers", "category": "Farm Inputs", "purchase_col": 15, "source_col": 39, "willing_col": 63, "spend_col": 87, "local_feasibility": 0.7, "default_capture_rate": 0.38, "default_margin": 0.22}, {"name": "Pesticides / Weedicides", "category": "Farm Inputs", "purchase_col": 16, "source_col": 40, "willing_col": 64, "spend_col": 88, "local_feasibility": 0.35, "default_capture_rate": 0.45, "default_margin": 0.22}, {"name": "Farm equipment rental/purchase", "category": "Farm Inputs", "purchase_col": 17, "source_col": 41, "willing_col": 65, "spend_col": 89, "local_feasibility": 0.7, "default_capture_rate": 0.37, "default_margin": 0.35}, {"name": "Vegetables", "category": "Raw Food", "purchase_col": 19, "source_col": 43, "willing_col": 67, "spend_col": 90, "local_feasibility": 1.0, "default_capture_rate": 0.38, "default_margin": 0.18}, {"name": "Fruits", "category": "Raw Food", "purchase_col": 20, "source_col": 44, "willing_col": 68, "spend_col": 91, "local_feasibility": 1.0, "default_capture_rate": 0.44, "default_margin": 0.18}, {"name": "Cereals", "category": "Raw Food", "purchase_col": 21, "source_col": 45, "willing_col": 69, "spend_col": 92, "local_feasibility": 1.0, "default_capture_rate": 0.43, "default_margin": 0.18}, {"name": "Milk & dairy", "category": "Raw Food", "purchase_col": 22, "source_col": 46, "willing_col": 70, "spend_col": 93, "local_feasibility": 1.0, "default_capture_rate": 0.34, "default_margin": 0.18}, {"name": "Meat / Fish / Eggs", "category": "Raw Food", "purchase_col": 23, "source_col": 47, "willing_col": 71, "spend_col": 94, "local_feasibility": 1.0, "default_capture_rate": 0.4, "default_margin": 0.18}, {"name": "Cooking oil", "category": "Raw Food", "purchase_col": 24, "source_col": 48, "willing_col": 72, "spend_col": 95, "local_feasibility": 0.7, "default_capture_rate": 0.54, "default_margin": 0.18}, {"name": "Spices / masala", "category": "Raw Food", "purchase_col": 25, "source_col": 49, "willing_col": 73, "spend_col": 96, "local_feasibility": 1.0, "default_capture_rate": 0.54, "default_margin": 0.18}, {"name": "Packaged snacks", "category": "Processed Food", "purchase_col": 26, "source_col": 50, "willing_col": 74, "spend_col": 97, "local_feasibility": 0.7, "default_capture_rate": 0.48, "default_margin": 0.25}, {"name": "Beverages", "category": "Processed Food", "purchase_col": 27, "source_col": 51, "willing_col": 75, "spend_col": 98, "local_feasibility": 0.7, "default_capture_rate": 0.47, "default_margin": 0.25}, {"name": "Ready-to-cook items", "category": "Processed Food", "purchase_col": 28, "source_col": 52, "willing_col": 76, "spend_col": 99, "local_feasibility": 0.7, "default_capture_rate": 0.51, "default_margin": 0.25}, {"name": "Personal care", "category": "Non-Food Essentials", "purchase_col": 29, "source_col": 53, "willing_col": 77, "spend_col": 100, "local_feasibility": 0.7, "default_capture_rate": 0.54, "default_margin": 0.2}, {"name": "Cleaning products", "category": "Non-Food Essentials", "purchase_col": 30, "source_col": 54, "willing_col": 78, "spend_col": 101, "local_feasibility": 0.7, "default_capture_rate": 0.55, "default_margin": 0.2}, {"name": "Clothing", "category": "Non-Food Essentials", "purchase_col": 31, "source_col": 55, "willing_col": 79, "spend_col": 102, "local_feasibility": 0.35, "default_capture_rate": 0.54, "default_margin": 0.2}, {"name": "Footwear", "category": "Non-Food Essentials", "purchase_col": 32, "source_col": 56, "willing_col": 80, "spend_col": 103, "local_feasibility": 0.35, "default_capture_rate": 0.54, "default_margin": 0.2}, {"name": "Household items", "category": "Non-Food Essentials", "purchase_col": 33, "source_col": 57, "willing_col": 81, "spend_col": 104, "local_feasibility": 0.35, "default_capture_rate": 0.53, "default_margin": 0.2}, {"name": "Education / stationery", "category": "Non-Food Essentials", "purchase_col": 34, "source_col": 58, "willing_col": 82, "spend_col": 105, "local_feasibility": 0.35, "default_capture_rate": 0.49, "default_margin": 0.2}, {"name": "Energy", "category": "Non-Food Essentials", "purchase_col": 35, "source_col": 59, "willing_col": 83, "spend_col": 106, "local_feasibility": 0.15, "default_capture_rate": 0.51, "default_margin": 0.05}, {"name": "Mobile recharge", "category": "Non-Food Essentials", "purchase_col": 36, "source_col": 60, "willing_col": 84, "spend_col": 107, "local_feasibility": 0.15, "default_capture_rate": 0.37, "default_margin": 0.05}, {"name": "Health & hygiene", "category": "Non-Food Essentials", "purchase_col": 37, "source_col": 61, "willing_col": 85, "spend_col": 108, "local_feasibility": 0.7, "default_capture_rate": 0.46, "default_margin": 0.2}];
 let headers = []; let rows = []; let allRows = []; let filteredRows = []; let products = []; let categories = []; let demo = {};
+let fieldIndex = { district:3, taluk:4, gp:5, village:6, familySize:9, land:10, income:12 };
 const recMap = {
  'Cereals':'Local grain/millet cleaning, milling, flour mixes and ready-to-cook packs',
  'Milk & dairy':'Strengthen dairy aggregation; add curd, paneer, ghee and sweets',
@@ -149,6 +150,65 @@ const recMap = {
  'Household items':'Repair/reuse/local retail aggregation; selective bamboo/wood products if materials exist',
  'Pesticides / Weedicides':'Promote safe bio-inputs only; chemical handling requires compliance'
 };
+const PRODUCT_ALIASES = {
+ 'Seeds':['seeds'],
+ 'Fertilizers':['fertilizers'],
+ 'Pesticides / Weedicides':['pesticides','weedicides'],
+ 'Farm equipment rental/purchase':['farm equipment'],
+ 'Vegetables':['vegetables'],
+ 'Fruits':['fruits'],
+ 'Cereals':['cereals'],
+ 'Milk & dairy':['milk','dairy'],
+ 'Meat / Fish / Eggs':['meat','fish','eggs'],
+ 'Cooking oil':['cooking oil'],
+ 'Spices / masala':['spices','masala'],
+ 'Packaged snacks':['packaged snacks'],
+ 'Beverages':['beverages'],
+ 'Ready-to-cook items':['ready-to-cook'],
+ 'Personal care':['personal care'],
+ 'Cleaning products':['cleaning products'],
+ 'Clothing':['clothing'],
+ 'Footwear':['footwear'],
+ 'Household items':['household items'],
+ 'Education / stationery':['education','stationery'],
+ 'Energy':['energy'],
+ 'Mobile recharge':['mobile','communication recharge'],
+ 'Health & hygiene':['health','hygiene']
+};
+function normHeader(x){ return String(x||'').toLowerCase().replace(/\s+/g,' ').trim(); }
+function findHeaderIndex(matchers, fallback){
+ var idx=headers.findIndex(function(h){
+   var n=normHeader(h);
+   return matchers.some(function(m){ return n.indexOf(m)>=0; });
+ });
+ return idx>=0?idx:fallback;
+}
+function resolveWorkbookColumns(){
+ fieldIndex = {
+   district: findHeaderIndex(['district'], fieldIndex.district),
+   taluk: findHeaderIndex(['taluk'], fieldIndex.taluk),
+   gp: findHeaderIndex(['gram panchayat'], fieldIndex.gp),
+   village: findHeaderIndex(['village'], fieldIndex.village),
+   familySize: findHeaderIndex(['family members','family size'], fieldIndex.familySize),
+   land: findHeaderIndex(['land owned'], fieldIndex.land),
+   income: findHeaderIndex(['monthly household income','household income'], fieldIndex.income)
+ };
+ PRODUCT_CONFIG.forEach(function(c){
+   var aliases=PRODUCT_ALIASES[c.name]||[c.name.toLowerCase()];
+   var matches=[];
+   headers.forEach(function(h,i){
+     var n=normHeader(h);
+     if(aliases.some(function(a){ return n.indexOf(a)>=0; })) matches.push(i);
+   });
+   if(matches.length>=4){
+     c.purchase_col=matches[0];
+     c.source_col=matches[1];
+     c.willing_col=matches[2];
+     c.spend_col=matches[3];
+   }
+ });
+}
+function getField(r,key){ var i=fieldIndex[key]; return i===undefined?'':r[i]; }
 function num(x){ if(x===null||x===undefined||x==='') return 0; let s=String(x).replace(/[,₹\s]/g,''); let n=parseFloat(s); return isNaN(n)?0:n; }
 function hasText(x, patt){ return String(x||'').toLowerCase().includes(patt.toLowerCase()); }
 function countTextFor(col,patt,src){ return src.reduce((a,r)=>a+(hasText(r[col],patt)?1:0),0); }
@@ -171,8 +231,8 @@ function computeForRows(src){
    return Object.assign({},c,{total_monthly_sample:total,avg_monthly_hh:avg,median_monthly_hh:median(spendVals),hh_nonzero:hhNonzero,village_purchase_count:vill,nearby_purchase_count:nearby,town_purchase_count:town,leak_count:leak,leak_share:leakShare,source_gp_count:gp,source_district_count:dist,source_state_count:state,source_outside_count:outside,yes_local_count:yes,depends_count:dep,no_count:no,readiness_score:readiness,opportunity_score:opp});
  });
  var catMap={}; prods.forEach(function(p){catMap[p.category]=(catMap[p.category]||0)+p.total_monthly_sample}); var cats=Object.entries(catMap).map(function(e){return{category:e[0],total_monthly_sample:e[1],avg_monthly_hh:N?e[1]/N:0}});
- var incomeVals=src.map(function(r){return num(r[12])}).filter(function(v){return v>0}); var meanInc=incomeVals.length?incomeVals.reduce(function(a,b){return a+b},0)/incomeVals.length:0;
- var dem={N:N, avg_family_size: src.reduce(function(a,r){return a+num(r[9])},0)/(N||1), avg_land: src.reduce(function(a,r){return a+num(r[10])},0)/(N||1), median_income: median(src.map(function(r){return num(r[12])})), mean_income: meanInc, total_spend: prods.reduce(function(a,p){return a+p.total_monthly_sample},0)};
+ var incomeVals=src.map(function(r){return num(getField(r,'income'))}).filter(function(v){return v>0}); var meanInc=incomeVals.length?incomeVals.reduce(function(a,b){return a+b},0)/incomeVals.length:0;
+ var dem={N:N, avg_family_size: src.reduce(function(a,r){return a+num(getField(r,'familySize'))},0)/(N||1), avg_land: src.reduce(function(a,r){return a+num(getField(r,'land'))},0)/(N||1), median_income: median(src.map(function(r){return num(getField(r,'income'))})), mean_income: meanInc, total_spend: prods.reduce(function(a,p){return a+p.total_monthly_sample},0)};
  return {products:prods,categories:cats,demo:dem};
 }
 function compute(){ var r=computeForRows(filteredRows); products=r.products; categories=r.categories; demo=r.demo; }
@@ -198,7 +258,7 @@ function fillTable(){ const cat=document.getElementById('catFilter').value, min=
 function fillInterpretation(){ let t=[...products].sort((a,b)=>b.opportunity_score-a.opportunity_score).slice(0,5); document.getElementById('interpretation').textContent=`For ${document.getElementById('placeName').value||'the selected place'}, the strongest local economy starting point is to treat household consumption as the assured market. High spend, high leakage, high willingness to buy locally and local-resource feasibility should decide what to pilot first.`; let ul=document.getElementById('recommendations'); ul.innerHTML=''; t.forEach(p=>{let li=document.createElement('li'); li.innerHTML=`<b>${p.name}</b>: ${recMap[p.name]||'pilot only after local resource and quality validation'}.`; ul.appendChild(li);}); }
 // ---------- Data Loading & Village Filter ----------
 
-function getVillageName(r){return String(r[6]||r[5]||r[4]||r[3]||'Unknown').trim()}
+function getVillageName(r){return String(getField(r,'village')||getField(r,'gp')||getField(r,'taluk')||getField(r,'district')||'Unknown').trim()}
 
 function populateVillageDropdown(){
   var sel=document.getElementById('villageSelect');
@@ -241,7 +301,8 @@ document.getElementById('loadBtn').onclick=function(){
         if(aoa.length<2)throw new Error('No data rows found.');
         headers=aoa[0]; rows=aoa.slice(1);
         if(headers.length<109)throw new Error('Uploaded file has '+headers.length+' columns; expected at least 109.');
-        allRows=rows.slice(); filteredRows=rows.slice();
+        resolveWorkbookColumns();
+        allRows=rows.filter(validRow); filteredRows=allRows.slice();
         hideMsg(); populateVillageDropdown();
         document.getElementById('villageFilterRow').style.display='block';
         compute(); draw();
@@ -277,10 +338,11 @@ document.getElementById('findSolutionsBtn').onclick=function(){
   if(!gk||!ak){alert('Please set both API keys in Settings first.');openSettings();return}
   var f=products.filter(function(p){return p.opportunity_score>=100});
   if(!f.length){alert('No products with opportunity score &ge; 100. Try different data.');return}
-  var dist=filteredRows.length&&filteredRows[0][3]?String(filteredRows[0][3]).trim():(allRows.length&&allRows[0][3]?String(allRows[0][3]).trim():'');
-  var taluk=filteredRows.length&&filteredRows[0][4]?String(filteredRows[0][4]).trim():(allRows.length&&allRows[0][4]?String(allRows[0][4]).trim():'');
-  var gp=filteredRows.length&&filteredRows[0][5]?String(filteredRows[0][5]).trim():(allRows.length&&allRows[0][5]?String(allRows[0][5]).trim():'');
-  var village=filteredRows.length&&filteredRows[0][6]?String(filteredRows[0][6]).trim():(allRows.length&&allRows[0][6]?String(allRows[0][6]).trim():'');
+  var baseRow=filteredRows[0]||allRows[0]||[];
+  var dist=String(getField(baseRow,'district')||'').trim();
+  var taluk=String(getField(baseRow,'taluk')||'').trim();
+  var gp=String(getField(baseRow,'gp')||'').trim();
+  var village=String(getField(baseRow,'village')||'').trim();
   sessionStorage.setItem('solutionsProducts',JSON.stringify(f.map(function(p){return{name:p.name,category:p.category,suggestion:recMap[p.name]||''}})));
   sessionStorage.setItem('dashboardProducts',JSON.stringify(products));
   sessionStorage.setItem('dashboardDemo',JSON.stringify(demo));
