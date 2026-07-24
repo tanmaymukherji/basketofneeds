@@ -50,11 +50,11 @@ th, td { border-bottom:1px solid #e5e7eb; padding:8px; text-align:left; } th { b
   </div>
  <div id="villageFilterRow" class="card" style="display:none;margin-bottom:16px">
    <label style="font-weight:600;font-size:14px">Village selection</label>
-   <p class="small" style="margin:6px 0 0">Tick one village to analyse it. Tick exactly two villages to compare them.</p>
+   <p class="small" style="margin:6px 0 0">Tick one or more villages to analyse them as a cluster. Tick exactly two villages to compare them side by side.</p>
    <div id="villageChecks" class="village-list"></div>
    <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
      <button id="showAllVillages" class="secondary" style="min-width:auto;padding:6px 18px">Show All Villages</button>
-     <button id="applyVillageFilter" class="secondary" style="min-width:auto;padding:6px 18px">Analyse Checked Village</button>
+     <button id="applyVillageFilter" class="secondary" style="min-width:auto;padding:6px 18px">Analyse Checked Villages</button>
      <button id="compareBtn" class="secondary" style="min-width:auto;padding:6px 18px">Compare Checked Villages</button>
      <span id="villageCount" class="small"></span>
    </div>
@@ -142,7 +142,7 @@ th, td { border-bottom:1px solid #e5e7eb; padding:8px; text-align:left; } th { b
 <script>
 const PRODUCT_CONFIG = [{"name": "Seeds", "category": "Farm Inputs", "purchase_col": 14, "source_col": 38, "willing_col": 62, "spend_col": 86, "local_feasibility": 0.7, "default_capture_rate": 0.43, "default_margin": 0.22}, {"name": "Fertilizers", "category": "Farm Inputs", "purchase_col": 15, "source_col": 39, "willing_col": 63, "spend_col": 87, "local_feasibility": 0.7, "default_capture_rate": 0.38, "default_margin": 0.22}, {"name": "Pesticides / Weedicides", "category": "Farm Inputs", "purchase_col": 16, "source_col": 40, "willing_col": 64, "spend_col": 88, "local_feasibility": 0.35, "default_capture_rate": 0.45, "default_margin": 0.22}, {"name": "Farm equipment rental/purchase", "category": "Farm Inputs", "purchase_col": 17, "source_col": 41, "willing_col": 65, "spend_col": 89, "local_feasibility": 0.7, "default_capture_rate": 0.37, "default_margin": 0.35}, {"name": "Vegetables", "category": "Raw Food", "purchase_col": 19, "source_col": 43, "willing_col": 67, "spend_col": 90, "local_feasibility": 1.0, "default_capture_rate": 0.38, "default_margin": 0.18}, {"name": "Fruits", "category": "Raw Food", "purchase_col": 20, "source_col": 44, "willing_col": 68, "spend_col": 91, "local_feasibility": 1.0, "default_capture_rate": 0.44, "default_margin": 0.18}, {"name": "Cereals", "category": "Raw Food", "purchase_col": 21, "source_col": 45, "willing_col": 69, "spend_col": 92, "local_feasibility": 1.0, "default_capture_rate": 0.43, "default_margin": 0.18}, {"name": "Milk & dairy", "category": "Raw Food", "purchase_col": 22, "source_col": 46, "willing_col": 70, "spend_col": 93, "local_feasibility": 1.0, "default_capture_rate": 0.34, "default_margin": 0.18}, {"name": "Meat / Fish / Eggs", "category": "Raw Food", "purchase_col": 23, "source_col": 47, "willing_col": 71, "spend_col": 94, "local_feasibility": 1.0, "default_capture_rate": 0.4, "default_margin": 0.18}, {"name": "Cooking oil", "category": "Raw Food", "purchase_col": 24, "source_col": 48, "willing_col": 72, "spend_col": 95, "local_feasibility": 0.7, "default_capture_rate": 0.54, "default_margin": 0.18}, {"name": "Spices / masala", "category": "Raw Food", "purchase_col": 25, "source_col": 49, "willing_col": 73, "spend_col": 96, "local_feasibility": 1.0, "default_capture_rate": 0.54, "default_margin": 0.18}, {"name": "Packaged snacks", "category": "Processed Food", "purchase_col": 26, "source_col": 50, "willing_col": 74, "spend_col": 97, "local_feasibility": 0.7, "default_capture_rate": 0.48, "default_margin": 0.25}, {"name": "Beverages", "category": "Processed Food", "purchase_col": 27, "source_col": 51, "willing_col": 75, "spend_col": 98, "local_feasibility": 0.7, "default_capture_rate": 0.47, "default_margin": 0.25}, {"name": "Ready-to-cook items", "category": "Processed Food", "purchase_col": 28, "source_col": 52, "willing_col": 76, "spend_col": 99, "local_feasibility": 0.7, "default_capture_rate": 0.51, "default_margin": 0.25}, {"name": "Personal care", "category": "Non-Food Essentials", "purchase_col": 29, "source_col": 53, "willing_col": 77, "spend_col": 100, "local_feasibility": 0.7, "default_capture_rate": 0.54, "default_margin": 0.2}, {"name": "Cleaning products", "category": "Non-Food Essentials", "purchase_col": 30, "source_col": 54, "willing_col": 78, "spend_col": 101, "local_feasibility": 0.7, "default_capture_rate": 0.55, "default_margin": 0.2}, {"name": "Clothing", "category": "Non-Food Essentials", "purchase_col": 31, "source_col": 55, "willing_col": 79, "spend_col": 102, "local_feasibility": 0.35, "default_capture_rate": 0.54, "default_margin": 0.2}, {"name": "Footwear", "category": "Non-Food Essentials", "purchase_col": 32, "source_col": 56, "willing_col": 80, "spend_col": 103, "local_feasibility": 0.35, "default_capture_rate": 0.54, "default_margin": 0.2}, {"name": "Household items", "category": "Non-Food Essentials", "purchase_col": 33, "source_col": 57, "willing_col": 81, "spend_col": 104, "local_feasibility": 0.35, "default_capture_rate": 0.53, "default_margin": 0.2}, {"name": "Education / stationery", "category": "Non-Food Essentials", "purchase_col": 34, "source_col": 58, "willing_col": 82, "spend_col": 105, "local_feasibility": 0.35, "default_capture_rate": 0.49, "default_margin": 0.2}, {"name": "Energy", "category": "Non-Food Essentials", "purchase_col": 35, "source_col": 59, "willing_col": 83, "spend_col": 106, "local_feasibility": 0.15, "default_capture_rate": 0.51, "default_margin": 0.05}, {"name": "Mobile recharge", "category": "Non-Food Essentials", "purchase_col": 36, "source_col": 60, "willing_col": 84, "spend_col": 107, "local_feasibility": 0.15, "default_capture_rate": 0.37, "default_margin": 0.05}, {"name": "Health & hygiene", "category": "Non-Food Essentials", "purchase_col": 37, "source_col": 61, "willing_col": 85, "spend_col": 108, "local_feasibility": 0.7, "default_capture_rate": 0.46, "default_margin": 0.2}];
 let headers = []; let rows = []; let allRows = []; let filteredRows = []; let products = []; let categories = []; let demo = {};
-let villageSummaries = {}; let villageMeta = {}; let selectedVillageName = ''; let aggregateSummary = null;
+let villageSummaries = {}; let villageMeta = {}; let selectedVillageName = ''; let selectedVillageNames = []; let aggregateSummary = null;
 let fieldIndex = { district:3, taluk:4, gp:5, village:6, familySize:9, land:10, income:12 };
 const recMap = {
  'Cereals':'Local grain/millet cleaning, milling, flour mixes and ready-to-cook packs',
@@ -229,6 +229,7 @@ function resolveWorkbookColumns(){
 function getField(r,key){ var i=fieldIndex[key]; return i===undefined?'':r[i]; }
 function num(x){ if(x===null||x===undefined||x==='') return 0; let s=String(x).replace(/[,₹\s]/g,''); let n=parseFloat(s); return isNaN(n)?0:n; }
 function escapeHtml(str){ var d=document.createElement('div'); d.textContent=String(str||''); return d.innerHTML; }
+function clusterLabel(villages){ if(!villages||!villages.length)return ''; if(villages.length===1)return villages[0]; if(villages.length<=3)return villages.join(' + '); return villages.length+' villages cluster'; }
 function hasText(x, patt){ return String(x||'').toLowerCase().includes(patt.toLowerCase()); }
 function countTextFor(col,patt,src){ return src.reduce((a,r)=>a+(hasText(r[col],patt)?1:0),0); }
 function countText(col,patt){ return countTextFor(col,patt,rows); }
@@ -296,7 +297,7 @@ function populateVillageChoices(){
   var box=document.getElementById('villageChecks');
   var villages=getVillageNames();
   box.innerHTML=villages.map(function(v){
-    var checked=v===selectedVillageName?' checked':'';
+    var checked=selectedVillageNames.indexOf(v)>=0?' checked':'';
     return '<label class="village-option"><input type="checkbox" class="villageCheck" value="'+escapeHtml(v)+'"'+checked+'><span title="'+escapeHtml(v)+'">'+escapeHtml(v)+'</span></label>';
   }).join('');
   document.getElementById('villageCount').textContent=(selectedVillageName?selectedVillageName:'All villages')+' · '+(demo.N||allRows.length||0)+' response(s)';
@@ -325,9 +326,54 @@ function getAggregateSummary(){
   return aggregateSummary||{products:products,categories:categories,demo:demo};
 }
 
+function combineSummaries(names){
+  var list=names.map(function(v){return villageSummaries[v]}).filter(Boolean);
+  if(!list.length)return null;
+  var totalN=list.reduce(function(a,s){return a+(s.demo.N||0)},0);
+  var productMap={}; var categoryMap={}; var familyTotal=0, landTotal=0, incomeWeighted=0, medianWeighted=0, spendTotal=0;
+  list.forEach(function(s){
+    var n=s.demo.N||0;
+    familyTotal+=(s.demo.avg_family_size||0)*n;
+    landTotal+=(s.demo.avg_land||0)*n;
+    incomeWeighted+=(s.demo.mean_income||0)*n;
+    medianWeighted+=(s.demo.median_income||0)*n;
+    spendTotal+=s.demo.total_spend||0;
+    (s.categories||[]).forEach(function(c){categoryMap[c.category]=(categoryMap[c.category]||0)+(c.total_monthly_sample||0)});
+    (s.products||[]).forEach(function(p){
+      if(!productMap[p.name])productMap[p.name]=Object.assign({},p,{_readinessDenom:0,_readinessNumerator:0});
+      else{
+        var t=productMap[p.name];
+        t.total_monthly_sample+=p.total_monthly_sample||0;
+        t.hh_nonzero+=p.hh_nonzero||0;
+        t.leak_count+=p.leak_count||0;
+        t.opportunity_score+=p.opportunity_score||0;
+        t.village_purchase_count+=p.village_purchase_count||0;
+        t.nearby_purchase_count+=p.nearby_purchase_count||0;
+        t.town_purchase_count+=p.town_purchase_count||0;
+        t.source_gp_count+=p.source_gp_count||0;
+        t.source_district_count+=p.source_district_count||0;
+        t.source_state_count+=p.source_state_count||0;
+        t.source_outside_count+=p.source_outside_count||0;
+        t.yes_local_count+=p.yes_local_count||0;
+        t.depends_count+=p.depends_count||0;
+        t.no_count+=p.no_count||0;
+      }
+    });
+  });
+  var combinedProducts=Object.values(productMap).map(function(p){
+    var denom=(p.yes_local_count||0)+(p.depends_count||0)+(p.no_count||0);
+    p.avg_monthly_hh=totalN?p.total_monthly_sample/totalN:0;
+    p.leak_share=totalN?(p.leak_count||0)/totalN:0;
+    p.readiness_score=denom?((p.yes_local_count||0)+0.5*(p.depends_count||0))/denom:0;
+    return p;
+  });
+  var combinedCategories=Object.keys(categoryMap).map(function(c){return{category:c,total_monthly_sample:categoryMap[c],avg_monthly_hh:totalN?categoryMap[c]/totalN:0}});
+  return {products:combinedProducts,categories:combinedCategories,demo:{N:totalN,avg_family_size:totalN?familyTotal/totalN:0,avg_land:totalN?landTotal/totalN:0,median_income:totalN?medianWeighted/totalN:0,mean_income:totalN?incomeWeighted/totalN:0,total_spend:spendTotal}};
+}
+
 function persistDashboardState(){
   if(!products.length)return;
-  sessionStorage.setItem('basketDashboardState',JSON.stringify({products:products,categories:categories,demo:demo,aggregateSummary:getAggregateSummary(),villageSummaries:villageSummaries,villageMeta:villageMeta,selectedVillageName:selectedVillageName}));
+  sessionStorage.setItem('basketDashboardState',JSON.stringify({products:products,categories:categories,demo:demo,aggregateSummary:getAggregateSummary(),villageSummaries:villageSummaries,villageMeta:villageMeta,selectedVillageName:selectedVillageName,selectedVillageNames:selectedVillageNames}));
   sessionStorage.setItem('dashboardProducts',JSON.stringify(products));
   sessionStorage.setItem('dashboardDemo',JSON.stringify(demo));
   sessionStorage.setItem('dashboardRecMap',JSON.stringify(recMap));
@@ -341,6 +387,7 @@ function restoreDashboardState(){
   aggregateSummary=saved.aggregateSummary||{products:products,categories:categories,demo:demo};
   villageSummaries=saved.villageSummaries||{}; villageMeta=saved.villageMeta||{};
   selectedVillageName=saved.selectedVillageName||'';
+  selectedVillageNames=saved.selectedVillageNames||[];
   document.getElementById('villageFilterRow').style.display='block';
   document.getElementById('crossVillageCard').style.display='block';
   populateVillageChoices();
@@ -350,15 +397,15 @@ function restoreDashboardState(){
 
 function applyVillageFilter(){
   var selected=getSelectedVillages();
-  if(selected.length!==1){ alert('Tick exactly one village for dashboard analysis. Use Compare Checked Villages for two villages.'); return; }
-  selectedVillageName=selected[0];
+  if(!selected.length){ alert('Tick one or more villages for dashboard analysis.'); return; }
+  selectedVillageNames=selected.slice();
+  selectedVillageName=clusterLabel(selected);
   if(allRows.length){
-    filteredRows=allRows.filter(function(r){return getVillageName(r)===selectedVillageName});
+    filteredRows=allRows.filter(function(r){return selected.indexOf(getVillageName(r))>=0});
     compute();
-  }else if(villageSummaries[selectedVillageName]){
-    products=villageSummaries[selectedVillageName].products;
-    categories=villageSummaries[selectedVillageName].categories;
-    demo=villageSummaries[selectedVillageName].demo;
+  }else{
+    var combined=combineSummaries(selected);
+    if(combined){products=combined.products; categories=combined.categories; demo=combined.demo;}
   }
   populateVillageChoices();
   draw();
@@ -367,6 +414,7 @@ function applyVillageFilter(){
 
 function showAllVillages(){
   selectedVillageName='';
+  selectedVillageNames=[];
   document.querySelectorAll('.villageCheck').forEach(function(el){el.checked=false});
   if(allRows.length){filteredRows=allRows.slice(); compute();}
   else{
@@ -456,7 +504,7 @@ document.getElementById('loadBtn').onclick=function(){
         headers=aoa[0]; rows=aoa.slice(1);
         if(headers.length<109)throw new Error('Uploaded file has '+headers.length+' columns; expected at least 109.');
         resolveWorkbookColumns();
-        allRows=rows.filter(validRow); filteredRows=allRows.slice(); selectedVillageName='';
+        allRows=rows.filter(validRow); filteredRows=allRows.slice(); selectedVillageName=''; selectedVillageNames=[];
         compute(); aggregateSummary={products:products,categories:categories,demo:demo}; buildVillageCaches();
         hideMsg(); populateVillageChoices();
         document.getElementById('villageFilterRow').style.display='block';
