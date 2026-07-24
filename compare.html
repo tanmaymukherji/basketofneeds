@@ -60,9 +60,8 @@ if(!dataA||!dataB||!dataA.products||!dataB.products){
 function renderColumn(data, prefix){
   if(!data||!data.products)return;
   var products=data.products; var demo=data.demo; var categories=data.categories||[];
-  var col=document.getElementById('col'+(prefix==='A'?1:2));
-  var el=document.getElementById('title'+prefix);
-  if(el)el.textContent=data.name||'Village '+prefix;
+  var col=document.getElementById('col'+prefix);
+  var title=data.name||'Village '+prefix;
   
   // KPIs
   var kpiHtml='<div class="kpis">';
@@ -91,7 +90,7 @@ function renderColumn(data, prefix){
   sorted.forEach(function(p){html+='<tr><td><b>'+p.name+'</b></td><td>'+p.category+'</td><td>'+fmtMoney(p.total_monthly_sample)+'</td><td>'+fmtMoney(p.avg_monthly_hh)+'</td><td>'+p.hh_nonzero+'</td><td>'+fmtPct(p.leak_share)+'</td><td>'+fmtPct(p.readiness_score)+'</td><td>'+Math.round(p.local_feasibility*100)+'%</td><td>'+Math.round(p.opportunity_score).toLocaleString('en-IN')+'</td><td class="small">'+(recMap[p.name]||'Assess locally')+'</td></tr>'});
   html+='</tbody></table></div>';
   
-  col.innerHTML=kpiHtml+html;
+  col.innerHTML='<h2 id="title'+prefix+'">'+title+'</h2>'+kpiHtml+html;
   
   // Draw charts
   var layout={margin:{l:100,r:12,t:10,b:40},paper_bgcolor:'white',plot_bgcolor:'white'};
@@ -113,6 +112,9 @@ function renderColumn(data, prefix){
 renderColumn(dataA,'A');
 renderColumn(dataB,'B');
 
-document.getElementById('backBtn').onclick=function(){window.location.href='index.html'};
+document.getElementById('backBtn').onclick=function(){
+  if(history.length>1) history.back();
+  else window.location.href='index.html';
+};
 </script>
 </body></html>
