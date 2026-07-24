@@ -226,25 +226,29 @@ function applyVillageFilter(){
 }
 
 document.getElementById('loadBtn').onclick=function(){
-  var f=document.getElementById('fileInput').files[0];
-  if(!f){showMsg('Please choose an Excel file first.');return}
-  var reader=new FileReader();
-  reader.onload=function(e){
-    try{
-      var data=new Uint8Array(e.target.result);
-      var wb=XLSX.read(data,{type:'array'});
-      var ws=wb.Sheets[wb.SheetNames[0]];
-      var aoa=XLSX.utils.sheet_to_json(ws,{header:1,defval:null,raw:false});
-      if(aoa.length<2)throw new Error('No data rows found.');
-      headers=aoa[0]; rows=aoa.slice(1);
-      if(headers.length<109)throw new Error('The uploaded file has fewer columns than expected.');
-      allRows=rows.slice(); filteredRows=rows.slice();
-      hideMsg(); populateVillageDropdown();
-      document.getElementById('villageFilterRow').style.display='block';
-      compute(); draw();
-    }catch(err){showMsg('Could not refresh: '+err.message)}
-  };
-  reader.readAsArrayBuffer(f);
+  try{
+    if(typeof XLSX==='undefined'){showMsg('XLSX library not loaded. Check internet connection and refresh.');return}
+    var f=document.getElementById('fileInput').files[0];
+    if(!f){showMsg('Please choose an Excel file first.');return}
+    var reader=new FileReader();
+    reader.onerror=function(){showMsg('Error reading file. Try a different file.')};
+    reader.onload=function(e){
+      try{
+        var data=new Uint8Array(e.target.result);
+        var wb=XLSX.read(data,{type:'array'});
+        var ws=wb.Sheets[wb.SheetNames[0]];
+        var aoa=XLSX.utils.sheet_to_json(ws,{header:1,defval:null,raw:false});
+        if(aoa.length<2)throw new Error('No data rows found.');
+        headers=aoa[0]; rows=aoa.slice(1);
+        if(headers.length<109)throw new Error('Uploaded file has '+headers.length+' columns; expected at least 109.');
+        allRows=rows.slice(); filteredRows=rows.slice();
+        hideMsg(); populateVillageDropdown();
+        document.getElementById('villageFilterRow').style.display='block';
+        compute(); draw();
+      }catch(err){showMsg('Could not refresh: '+err.message)}
+    };
+    reader.readAsArrayBuffer(f);
+  }catch(err){showMsg('Unexpected error: '+err.message)}
 };
 
 function showMsg(s){var el=document.getElementById('uploadMsg');el.style.display='block';el.textContent=s}
